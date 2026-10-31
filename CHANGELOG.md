@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Fewer surprises from macOS folder-permission pop-ups: Settings gains a Permissions section (Full Disk Access status and shortcuts to the right System Settings panes), and a one-time dismissible tip on the home and welcome screens explains why macOS asks and offers a single optional alternative.
+- `Scripts/setup-local-signing.sh` creates a stable local signing identity, and `Scripts/build.sh` uses it automatically, so rebuilding on your own Mac no longer makes macOS forget your folder permissions. Docs explain why signed releases keep permissions across updates and ad-hoc ones don't.
+
 ## [1.1.1] - 2026-10-31
 
 ### Fixed

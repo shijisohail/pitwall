@@ -15,6 +15,8 @@ final class AppSettings {
     }
     var animatedBackground: Bool { didSet { defaults.set(animatedBackground, forKey: "animatedBackground") } }
     var confirmQuitWhileRunning: Bool { didSet { defaults.set(confirmQuitWhileRunning, forKey: "confirmQuit") } }
+    /// Set once the user has seen (and dismissed) the one-time tip about macOS folder permissions.
+    var permissionsTipDismissed: Bool { didSet { defaults.set(permissionsTipDismissed, forKey: "permissionsTipDismissed") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -23,6 +25,7 @@ final class AppSettings {
         claudePath = defaults.string(forKey: "claudePath") ?? ""
         animatedBackground = defaults.object(forKey: "animatedBackground") as? Bool ?? false     // costs ~4% CPU while idle, so opt-in
         confirmQuitWhileRunning = defaults.object(forKey: "confirmQuit") as? Bool ?? true
+        permissionsTipDismissed = defaults.object(forKey: "permissionsTipDismissed") as? Bool ?? false
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
 }
