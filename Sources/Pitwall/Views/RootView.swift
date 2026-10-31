@@ -1,0 +1,110 @@
+import SwiftUI
+
+struct RootView: View {
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        @Bindable var store = store
+        HStack(spacing: 0) {
+            Rail()
+            VStack(spacing: 0) {
+                if !store.workspace.isEmpty { TabBar() }
+                Group {
+                    if store.workspace.isEmpty { Welcome() }
+                    else if store.showBoard { BoardView() }
+                    else if let c = store.current { SessionScreen(conversation: c).id(c.id) }
+                    else { BoardView() }
+                }
+            }
+        }
+        .background { AuroraBackground() }
+        .dropDestination(for: URL.self) { urls, _ in
+            let dirs = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            dirs.forEach { store.openFolder($0.path) }
+            return !dirs.isEmpty
+        }
+        .sheet(item: $store.sheet) { SheetHost(kind: $0) }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            store.conversations.forEach { $0.runner?.stop() }     // don't leave claude children running after quit
+        }
+        .task {
+            await store.scan()
+            // Pick up sessions started or changed in a terminal.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(6))
+                await store.scan()
+            }
+        }
+    }
+}
+
+/// B: session list · chat · inspector.
+struct SessionScreen: View {
+    @Bindable var conversation: Conversation
+    @AppStorage("inspectorOpen") private var inspectorOpen = true
+
+    var body: some View {
+        GeometryReader { g in
+            HStack(spacing: 0) {
+                SessionList()
+                divider
+                ChatView(conversation: conversation, inspectorOpen: $inspectorOpen)
+                if inspectorOpen && g.size.width > 1150 {
+                    divider
+                    InspectorView(conversation: conversation).transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
+        }
+    }
+
+    private var divider: some View { Rectangle().fill(.white.opacity(0.07)).frame(width: 1) }
+}
+
+struct Rail: View {
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Color.clear.frame(height: 34)          // room for the traffic lights
+            item("square.grid.2x2", "Pit Wall (⌘1)", active: store.showBoard) { store.showBoard = true }
+            item("bubble.left.and.bubble.right", "Sessions (⌘2)", active: !store.showBoard) { showSessions() }
+            item("magnifyingglass", "Search all sessions (⌘K)", active: false) { store.sheet = .switcher }
+            Spacer()
+            item("folder.badge.plus", "Open or close projects (⌘O chooses a folder)", active: false) { store.sheet = .projects }
+            item("command", "Commands & skills", active: false) { store.sheet = .commands }
+        }
+        .padding(.vertical, 14).frame(width: 68)
+        .overlay(alignment: .trailing) { Rectangle().fill(.white.opacity(0.07)).frame(width: 1) }
+    }
+
+    private func showSessions() {
+        if store.current == nil { store.selection = store.filtered.first?.id }
+        store.showBoard = false
+    }
+
+    private func item(_ icon: String, _ help: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 17, weight: .medium))
+                .foregroundStyle(active ? Color.accentColor : Color.secondary)
+                .frame(width: 42, height: 42)
+                .background(active ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 8))
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).help(help).accessibilityLabel(help)
+    }
+}
+
+struct Welcome: View {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 18) {
+                Image(systemName: "sparkles").font(.system(size: 40, weight: .light))
+                    .frame(width: 96, height: 96).panel(RoundedRectangle(cornerRadius: 20), tint: HTB.green.opacity(0.08), border: HTB.green.opacity(0.5))
+                Text("Open a project").font(.system(size: 28, weight: .semibold))
+                Text("Pitwall only shows and loads the folders you open. Pick one to begin; your other history stays untouched.")
+                    .foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 440)
+                ProjectPicker().frame(maxWidth: 560).padding(.top, 6)
+            }
+            .frame(maxWidth: .infinity).padding(.vertical, 50).padding(.horizontal, 30)
+        }
+    }
+}

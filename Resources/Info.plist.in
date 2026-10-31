@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key><string>Pitwall</string>
+	<key>CFBundleDisplayName</key><string>Pitwall</string>
+	<key>CFBundleIdentifier</key><string>@BUNDLE_ID@</string>
+	<key>CFBundleExecutable</key><string>Pitwall</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+	<key>CFBundleShortVersionString</key><string>@VERSION@</string>
+	<key>CFBundleVersion</key><string>@BUILD@</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>LSMinimumSystemVersion</key><string>26.0</string>
+	<key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
+	<key>NSHumanReadableCopyright</key><string>Copyright © @YEAR@ Pitwall contributors. MIT License.</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>NSPrincipalClass</key><string>NSApplication</string>
+	<key>NSSupportsAutomaticTermination</key><false/>
+	<key>NSSupportsSuddenTermination</key><false/>
+	<key>ITSAppUsesNonExemptEncryption</key><false/>
+	<key>PitwallRepoURL</key><string>@REPO_URL@</string>
+	<!-- Claude Code (a child process of Pitwall) reads and writes inside the folders you open. macOS shows these when it does. -->
+	<key>NSDesktopFolderUsageDescription</key><string>Pitwall lets Claude Code work in folders you open, including ones on your Desktop.</string>
+	<key>NSDocumentsFolderUsageDescription</key><string>Pitwall lets Claude Code work in folders you open, including ones in Documents.</string>
+	<key>NSDownloadsFolderUsageDescription</key><string>Pitwall lets Claude Code work in folders you open, including ones in Downloads.</string>
+	<key>NSRemovableVolumesUsageDescription</key><string>Pitwall lets Claude Code work in folders you open on external drives.</string>
+	<key>NSNetworkVolumesUsageDescription</key><string>Pitwall lets Claude Code work in folders you open on network volumes.</string>
+</dict>
+</plist>

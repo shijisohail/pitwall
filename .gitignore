@@ -1,0 +1,28 @@
+# Build output
+/build/
+/dist/
+/.build/
+/.swiftpm/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+Resources/AppIcon.iconset/
+
+# macOS
+.DS_Store
+
+# Secrets and signing material: never commit these
+*.p12
+*.cer
+*.pem
+*.p8
+*.mobileprovision
+*.keychain
+*.keychain-db
+.env
+.env.*
+
+# Editors
+.idea/
+.vscode/
+*.swp
