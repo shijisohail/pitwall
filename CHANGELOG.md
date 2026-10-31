@@ -6,6 +6,24 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-31
+
+### Changed
+- The idle Pit Wall board is now an interactive home: a time-of-day greeting with a quick-start prompt, one-click task tiles, project cards (continue the latest session, start a new one, see what's working or waiting) and recent sessions. The first-launch screen has a folder drop zone and recent-project cards.
+
+### Fixed
+- Background-agent `<task-notification>` messages no longer show as a raw XML bubble. They render as a one-line status (agent name, duration, tools, tokens) with a Log button and click-to-expand raw text.
+
+### Security
+- Approving a tool from the Pit Wall board now shows the full command, diff or arguments (scrollable), the same as the chat card, instead of a clipped one-line summary.
+- Clicking a file path from a session no longer launches apps, scripts or other executables: those are revealed in Finder instead of opened.
+- Terminal handoff scripts are created owner-only (0700) and removed a minute after launch.
+
+### Added
+- Message queue: keep typing while Claude is working. Messages queue above the input and go out one at a time as each turn finishes. Each queued message can be sent now (interrupts the current turn), edited or removed; ↑ on an empty input edits the newest one, and Esc/Stop hands the whole queue back to the input.
+- ⇧Tab cycles the permission mode (ask → accept edits → plan), as in Claude Code. Full access is never reachable by shortcut.
+- Drag and drop into the chat: drop screenshots, image files or images dragged from a browser anywhere on the chat pane (with a "Drop to attach" highlight). Other files and folders are added to the prompt as `@path` mentions.
+
 ## [1.0.0] - 2026-10-31
 
 First release.

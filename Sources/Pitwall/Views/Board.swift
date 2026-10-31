@@ -34,10 +34,14 @@ struct BoardView: View {
         VStack(alignment: .leading, spacing: 16) {
             header
             projectChips
-            HStack(alignment: .top, spacing: 16) {
-                column("Working", HTB.green, working, pulse: true, empty: "Nothing is running right now.")
-                column("Needs you", HTB.amber, needs, pulse: false, empty: "No approvals or questions waiting.")
-                column(recentTitle, .gray, recent, pulse: false, empty: "No sessions yet. Open a project to begin.")
+            if needs.isEmpty && working.isEmpty {
+                HomeView(recent: recent)
+            } else {
+                HStack(alignment: .top, spacing: 16) {
+                    column("Working", HTB.green, working, pulse: true, empty: "Nothing is running right now.")
+                    column("Needs you", HTB.amber, needs, pulse: false, empty: "No approvals or questions waiting.")
+                    column(recentTitle, .gray, recent, pulse: false, empty: "No sessions yet. Open a project to begin.")
+                }
             }
         }
         .padding(.horizontal, 26).padding(.top, 22).padding(.bottom, 20)
@@ -224,10 +228,8 @@ struct SessionCard: View {
         switch a.kind {
         case .tool:
             Text("Claude wants to use **\(a.tool)**").font(.callout).foregroundStyle(.secondary)
-            Text(a.tool == "Bash" ? "$ " + (a.input["command"] as? String ?? "") : toolBlock(a).toolSummary)
-                .font(.system(size: 12, design: .monospaced)).foregroundStyle(.orange).lineLimit(3)
-                .help(a.tool == "Bash" ? (a.input["command"] as? String ?? "") : "")
-                .padding(.horizontal, 12).padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading)
+            // The full command / diff / arguments, scrollable: never offer Allow on a clipped view.
+            ScrollView { ApprovalPreview(a: a) }.frame(maxHeight: 170)
                 .background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
             HStack(spacing: 8) {
                 Button("Allow") { c.allow(a) }.buttonStyle(HTBPrimary())
@@ -255,12 +257,6 @@ struct SessionCard: View {
             Text("A plan is ready for review").font(.callout).foregroundStyle(.secondary)
             Button("Review plan") { store.open(c) }.buttonStyle(HTBPrimary()).controlSize(.small)
         }
-    }
-
-    private func toolBlock(_ a: Approval) -> Block {
-        var b = Block(kind: .tool); b.toolName = a.tool
-        if let d = try? JSONSerialization.data(withJSONObject: a.input) { b.inputJSON = String(decoding: d, as: UTF8.self) }
-        return b
     }
 
     // MARK: Done

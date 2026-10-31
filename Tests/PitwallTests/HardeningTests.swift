@@ -57,3 +57,60 @@ import Foundation
         for leak in ["secret", "hunter2", "/Users"] { #expect(!d.contains(leak), "leaked \(leak)") }
     }
 }
+
+@Suite struct DropIntakeTests {
+    @Test func mentionIsRelativeInsideSessionFolder() {
+        #expect(DropIntake.mention(for: "/work/app/src/a.swift", cwd: "/work/app") == "@src/a.swift")
+        #expect(DropIntake.mention(for: "/work/app/src/a.swift", cwd: "/work/app/") == "@src/a.swift")
+    }
+    @Test func mentionIsAbsoluteOutsideAndQuotedWithSpaces() {
+        #expect(DropIntake.mention(for: "/other/a.txt", cwd: "/work/app") == "@/other/a.txt")
+        #expect(DropIntake.mention(for: "/work/app/My File.md", cwd: "/work/app") == "@\"My File.md\"")
+        #expect(DropIntake.mention(for: "/work/application/a", cwd: "/work/app") == "@/work/application/a")
+    }
+}
+
+@MainActor @Suite struct FilePolicyTests {
+    private func tmp() throws -> URL {
+        let d = FileManager.default.temporaryDirectory.appendingPathComponent("pw-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
+    }
+
+    @Test func documentsAndFoldersOpenButLaunchablesAreRevealed() throws {
+        let d = try tmp(); defer { try? FileManager.default.removeItem(at: d) }
+        func make(_ name: String, mode: Int = 0o644) -> URL {
+            let u = d.appendingPathComponent(name)
+            FileManager.default.createFile(atPath: u.path, contents: Data("x".utf8), attributes: [.posixPermissions: mode])
+            return u
+        }
+        #expect(FilePolicy.isSafeToOpen(make("notes.txt")))
+        #expect(FilePolicy.isSafeToOpen(make("main.swift")))
+        #expect(FilePolicy.isSafeToOpen(d))
+        #expect(!FilePolicy.isSafeToOpen(make("run.command")))
+        #expect(!FilePolicy.isSafeToOpen(make("setup.sh")))
+        #expect(!FilePolicy.isSafeToOpen(make("tool", mode: 0o755)))
+        let app = d.appendingPathComponent("Fake.app"); try FileManager.default.createDirectory(at: app, withIntermediateDirectories: true)
+        #expect(!FilePolicy.isSafeToOpen(app))
+        #expect(!FilePolicy.isSafeToOpen(d.appendingPathComponent("missing.txt")))
+    }
+
+    @Test func symlinkToLaunchableIsNotSafe() throws {
+        let d = try tmp(); defer { try? FileManager.default.removeItem(at: d) }
+        let real = d.appendingPathComponent("evil.command")
+        FileManager.default.createFile(atPath: real.path, contents: Data("x".utf8))
+        let link = d.appendingPathComponent("innocent.txt")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        #expect(!FilePolicy.isSafeToOpen(link))
+    }
+
+    @Test func handoffScriptIsOwnerOnly() throws {
+        let d = try tmp(); defer { try? FileManager.default.removeItem(at: d) }
+        let f = try #require(TerminalApp.writeHandoff("echo hi", cwd: "/tmp/a b", in: d.appendingPathComponent("h")))
+        let perm = (try FileManager.default.attributesOfItem(atPath: f.path)[.posixPermissions] as? NSNumber)?.intValue
+        #expect(perm == 0o700)
+        let dirPerm = (try FileManager.default.attributesOfItem(atPath: f.deletingLastPathComponent().path)[.posixPermissions] as? NSNumber)?.intValue
+        #expect(dirPerm == 0o700)
+        #expect(try String(contentsOf: f, encoding: .utf8).contains("cd '/tmp/a b' && echo hi"))
+    }
+}
