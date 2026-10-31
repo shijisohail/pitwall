@@ -27,14 +27,34 @@ enum TerminalApp {
     static var claude: String { quote(ClaudeRunner.claudePath ?? "claude") }
 
     /// Opens Terminal running `command` in `cwd` (via a .command file, so no Automation permission is needed).
-    static func run(_ command: String, cwd: String) {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("pitwall-handoff", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    static var handoffDir: URL { FileManager.default.temporaryDirectory.appendingPathComponent("pitwall-handoff", isDirectory: true) }
+
+    /// The scripts are only needed for a moment; remove stale ones so they don't pile up in the temp directory.
+    static func cleanupHandoffFiles(olderThan age: TimeInterval = 86_400, in dir: URL? = nil) {
+        let d = dir ?? handoffDir
+        guard let files = try? FileManager.default.contentsOfDirectory(at: d, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+        for f in files where f.pathExtension == "command" {
+            let m = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            if Date().timeIntervalSince(m) > age { try? FileManager.default.removeItem(at: f) }
+        }
+    }
+
+    /// Writes the script owner-only (0700, set at creation so it is never briefly readable by others).
+    static func writeHandoff(_ command: String, cwd: String, in dir: URL? = nil) -> URL? {
+        let dir = dir ?? handoffDir
+        let fm = FileManager.default
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let f = dir.appendingPathComponent("\(UUID().uuidString).command")
         let script = "#!/bin/zsh -l\ncd \(quote(cwd)) && \(command)\n"
-        guard (try? script.write(to: f, atomically: true, encoding: .utf8)) != nil else { return }
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: f.path)
+        guard fm.createFile(atPath: f.path, contents: Data(script.utf8), attributes: [.posixPermissions: 0o700]) else { return nil }
+        return f
+    }
+
+    static func run(_ command: String, cwd: String) {
+        guard let f = writeHandoff(command, cwd: cwd) else { return }
         NSWorkspace.shared.open(f)
+        // Terminal reads the script as it opens; there's no reason to leave it behind.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { try? FileManager.default.removeItem(at: f) }
     }
 }
 

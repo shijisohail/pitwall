@@ -1,13 +1,16 @@
 import SwiftUI
 
 /// Browser-style tabs: Pit Wall is pinned first, then one tab per open session.
+/// Tab strip height. It shares a row with the window's traffic lights, so it stays slim.
+let tabBarHeight: CGFloat = 30
+
 struct TabBar: View {
     @Environment(Store.self) private var store
 
     var body: some View {
         HStack(spacing: 4) {
             boardTab
-            Rectangle().fill(HTB.border).frame(width: 1, height: 18).padding(.horizontal, 4)
+            Rectangle().fill(HTB.border).frame(width: 1, height: 14).padding(.horizontal, 4)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 2) {
                     ForEach(store.tabs, id: \.self) { id in
@@ -17,10 +20,10 @@ struct TabBar: View {
                     }
                 }
             }
-            Button { store.newConversation() } label: { Image(systemName: "plus").font(.system(size: 12, weight: .bold)).frame(width: 28, height: 28) }
+            Button { store.newConversation() } label: { Image(systemName: "plus").font(.system(size: 11, weight: .bold)).frame(width: 24, height: 24) }
                 .buttonStyle(.plain).foregroundStyle(.secondary).help("New tab (⌘T)").accessibilityLabel("New tab")
         }
-        .padding(.horizontal, 10).frame(height: 40)
+        .padding(.horizontal, 10).frame(height: tabBarHeight)
         .background(HTB.bg.opacity(0.55))
         .overlay(alignment: .bottom) { Rectangle().fill(HTB.border).frame(height: 1) }
     }
@@ -28,11 +31,11 @@ struct TabBar: View {
     private var boardTab: some View {
         Button { store.showBoard = true } label: {
             HStack(spacing: 7) {
-                Image(systemName: "square.grid.2x2").font(.system(size: 12, weight: .semibold))
-                Text("BOARD").font(.system(size: 11.5, weight: .bold, design: .monospaced)).tracking(0.8)
+                Image(systemName: "square.grid.2x2").font(.system(size: 11, weight: .semibold))
+                Text("BOARD").font(.system(size: 11, weight: .bold, design: .monospaced)).tracking(0.8)
             }
             .foregroundStyle(store.showBoard ? HTB.green : Color.secondary)
-            .padding(.horizontal, 12).frame(height: 40)
+            .padding(.horizontal, 12).frame(height: tabBarHeight)
             .background(store.showBoard ? HTB.panel : .clear)
             .overlay(alignment: .bottom) { Rectangle().fill(store.showBoard ? HTB.green : .clear).frame(height: 2) }
         }.buttonStyle(.plain).help("Pit Wall (⌘1)")
@@ -50,7 +53,7 @@ private struct TabItem: View {
     var body: some View {
         HStack(spacing: 8) {
             PulseDot(color: dot, pulsing: c.isRunning || !c.approvals.isEmpty)
-            Text(c.title).font(.system(size: 12, design: .monospaced)).lineLimit(1).frame(maxWidth: 170, alignment: .leading)
+            Text(c.title).font(.system(size: 11.5, design: .monospaced)).lineLimit(1).frame(maxWidth: 170, alignment: .leading)
                 .foregroundStyle(active ? Color.primary : Color.secondary)
             Button { store.closeTab(c.id) } label: {
                 Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).frame(width: 16, height: 16)
@@ -58,7 +61,7 @@ private struct TabItem: View {
             }.buttonStyle(.plain).foregroundStyle(.secondary).opacity(active || hover ? 1 : 0.35)
                 .accessibilityLabel("Close tab \(c.title)")
         }
-        .padding(.horizontal, 12).frame(height: 40)
+        .padding(.horizontal, 12).frame(height: tabBarHeight)
         .background(active ? HTB.panel : (hover ? Color.white.opacity(0.04) : .clear))
         .overlay(alignment: .bottom) { Rectangle().fill(active ? HTB.green : .clear).frame(height: 2) }
         .contentShape(Rectangle())
@@ -78,5 +81,8 @@ private struct TabItem: View {
             Button("Fork") { store.fork(c) }.disabled(c.sessionID == nil)
         }
         .help(c.title)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(c.title), \(!c.approvals.isEmpty ? "needs your input" : c.isRunning ? "working" : "idle")")
+        .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
     }
 }

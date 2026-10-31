@@ -8,6 +8,7 @@ struct RootView: View {
         HStack(spacing: 0) {
             Rail()
             VStack(spacing: 0) {
+                if store.cliStatus == .missing { CLIMissingBanner() }
                 if !store.workspace.isEmpty { TabBar() }
                 Group {
                     if store.workspace.isEmpty { Welcome() }
@@ -16,17 +17,13 @@ struct RootView: View {
                     else { BoardView() }
                 }
             }
+            .ignoresSafeArea(.container, edges: .top)      // tabs sit in the traffic-light row instead of under an empty strip
         }
         .background { AuroraBackground() }
-        .dropDestination(for: URL.self) { urls, _ in
-            let dirs = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-            dirs.forEach { store.openFolder($0.path) }
-            return !dirs.isEmpty
-        }
+        .dropDestination(for: URL.self) { urls, _ in store.openDropped(urls) }
         .sheet(item: $store.sheet) { SheetHost(kind: $0) }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
-            store.conversations.forEach { $0.runner?.stop() }     // don't leave claude children running after quit
-        }
+        .environment(\.openURL, OpenURLAction { LinkPolicy.allows($0) ? .systemAction : .discarded })
+        .task { await store.checkCLI() }
         .task {
             await store.scan()
             // Pick up sessions started or changed in a terminal.
@@ -93,18 +90,33 @@ struct Rail: View {
     }
 }
 
-struct Welcome: View {
+/// Shown until the `claude` CLI is found: Pitwall can't do anything without it.
+struct CLIMissingBanner: View {
+    @Environment(Store.self) private var store
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                Image(systemName: "sparkles").font(.system(size: 40, weight: .light))
-                    .frame(width: 96, height: 96).panel(RoundedRectangle(cornerRadius: 20), tint: HTB.green.opacity(0.08), border: HTB.green.opacity(0.5))
-                Text("Open a project").font(.system(size: 28, weight: .semibold))
-                Text("Pitwall only shows and loads the folders you open. Pick one to begin; your other history stays untouched.")
-                    .foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 440)
-                ProjectPicker().frame(maxWidth: 560).padding(.top, 6)
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(HTB.amber)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Claude Code wasn't found").fontWeight(.semibold)
+                Text("Pitwall drives the `claude` command-line tool. Install it, or point Pitwall at it.").font(.caption).foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity).padding(.vertical, 50).padding(.horizontal, 30)
+            Spacer()
+            Button("Install Instructions") { NSWorkspace.shared.open(URL(string: "https://docs.claude.com/en/docs/claude-code/setup")!) }.buttonStyle(HTBSecondary())
+            Button("Choose…") { choose() }.buttonStyle(HTBSecondary())
+            Button("Retry") { Task { await store.checkCLI() } }.buttonStyle(HTBPrimary())
         }
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .background(HTB.amber.opacity(0.10))
+        .overlay(alignment: .bottom) { Rectangle().fill(HTB.amber.opacity(0.5)).frame(height: 1) }
+    }
+
+    private func choose() {
+        let p = NSOpenPanel()
+        p.message = "Choose the claude executable"; p.prompt = "Use This"
+        p.directoryURL = URL(fileURLWithPath: NSHomeDirectory() + "/.local/bin")
+        guard p.runModal() == .OK, let url = p.url else { return }
+        AppSettings.shared.claudePath = url.path
+        Task { await store.checkCLI() }
     }
 }

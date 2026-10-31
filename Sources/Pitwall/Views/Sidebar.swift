@@ -128,6 +128,7 @@ private struct SessionRow: View {
             .background(selected ? Color.white.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(c.title), \(!c.approvals.isEmpty ? "needs your input" : c.isRunning ? "working" : c.externallyActive ? "active in a terminal" : "idle")")
         .contextMenu {
             Button("Rename…") { c.promptRename() }
             Button("Fork") { Store.shared.fork(c) }.disabled(c.sessionID == nil)

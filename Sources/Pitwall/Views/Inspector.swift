@@ -4,6 +4,7 @@ import AppKit
 struct InspectorView: View {
     @Bindable var conversation: Conversation
     @Environment(Store.self) private var store
+    @Bindable private var settings = AppSettings.shared
     @State private var tab = "changes"
     @State private var changes: [FileChange] = []
     @State private var collapsed: Set<String> = []
@@ -18,16 +19,20 @@ struct InspectorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 4) {
-                tabButton("changes", "Changes", badge: changes.count)
-                tabButton("plan", "Plan")
-                tabButton("context", "Context")
-                tabButton("files", "Files")
-            }
+            ScrollView(.horizontal) {
+                HStack(spacing: 2) {
+                    tabButton("changes", "Changes", badge: changes.count)
+                    tabButton("plan", "Plan")
+                    if settings.showAgents { tabButton("agents", "Agents", badge: conversation.agentsWorking) }
+                    tabButton("context", "Context")
+                    tabButton("files", "Files")
+                }
+            }.scrollIndicators(.hidden)
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     switch tab {
                     case "plan": plan
+                    case "agents" where settings.showAgents: AgentsTab(conversation: conversation)
                     case "context": context
                     case "files": files
                     default: changesTab
@@ -49,7 +54,7 @@ struct InspectorView: View {
             }
             .font(.system(size: 12.5, weight: tab == id ? .semibold : .regular))
             .foregroundStyle(tab == id ? Color.primary : Color.secondary)
-            .padding(.horizontal, 12).padding(.vertical, 6)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
             .background(tab == id ? Color.white.opacity(0.12) : .clear, in: Capsule())
         }.buttonStyle(.plain)
     }
@@ -86,7 +91,7 @@ struct InspectorView: View {
                         Text("+\(f.added)").foregroundStyle(.green); Text("−\(f.removed)").foregroundStyle(.red)
                     }.font(.system(size: 12, design: .monospaced)).contentShape(Rectangle())
                 }.buttonStyle(.plain)
-                Button { NSWorkspace.shared.open(URL(fileURLWithPath: f.path)) } label: { Image(systemName: "arrow.up.right.square") }
+                Button { FilePolicy.openOrReveal(f.path) } label: { Image(systemName: "arrow.up.right.square") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("Open file")
                 Button { revert(f) } label: { Image(systemName: "arrow.uturn.backward") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("Revert with git checkout").disabled(isReverted)
@@ -187,7 +192,7 @@ struct InspectorView: View {
             empty("No files touched yet", "Files Claude reads, searches or edits are listed here.")
         } else {
             ForEach(touched, id: \.0) { path, ops in
-                Button { NSWorkspace.shared.open(URL(fileURLWithPath: path)) } label: {
+                Button { FilePolicy.openOrReveal(path) } label: {
                     HStack(spacing: 10) {
                         Image(systemName: ops.contains("Edit") || ops.contains("Write") ? "pencil.line" : "doc.text")
                             .foregroundStyle(ops.contains("Edit") || ops.contains("Write") ? HTB.green : HTB.cyan).frame(width: 18)

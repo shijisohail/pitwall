@@ -30,6 +30,18 @@ final class Conversation: Identifiable {
     var externallyActive = false
     var retryNote: String?
     var turnStart: Date?
+    /// Composer attachments, held here so the whole chat pane can accept drops.
+    var draftImages: [NSImage] = []
+    /// Text waiting to be appended to the composer's prompt (dropped `@path` mentions, restored queued messages).
+    var draftAppend: [String] = []
+    /// Messages typed while Claude is working. They go out one at a time, each when the previous turn finishes.
+    var queue: [QueuedMessage] = []
+    /// Set by "send now": the interrupt that follows must not hand the queue back to the composer.
+    @ObservationIgnored var drainAfterStop = false
+    /// Subagents Claude has spawned in this session (see Agents.swift).
+    var agents: [AgentRun] = []
+    @ObservationIgnored var agentSlots: [String: Int] = [:]
+    @ObservationIgnored var agentFinishCount = 0
 
     @ObservationIgnored var runner: ClaudeRunner?
     @ObservationIgnored var blockMap: [Int: Int] = [:]
@@ -50,6 +62,7 @@ final class Conversation: Identifiable {
     init(cwd: String) {
         id = UUID().uuidString
         self.cwd = cwd; title = Self.placeholderTitle; updatedAt = Date()
+        permission = AppSettings.shared.defaultPermission
     }
 
     /// A past Claude Code session: metadata now, transcript loaded on demand.
@@ -57,6 +70,7 @@ final class Conversation: Identifiable {
         id = m.id; cwd = m.cwd; branch = m.branch; historyPath = m.path; entrypoint = m.entrypoint
         title = m.title; sessionID = m.id; updatedAt = m.date
         loadState = .notLoaded; searchText = m.searchText
+        permission = AppSettings.shared.defaultPermission
     }
 
     func update(from m: SessionMeta) {
@@ -76,6 +90,7 @@ final class Conversation: Identifiable {
             guard let self else { return }
             self.parser = r.parser; self.tailOffset = r.offset
             self.messages = r.parser.messages
+            self.seedAgentsFromHistory()
             if self.contextTokens == 0 { self.contextTokens = r.parser.contextTokens }
             self.loadState = .loaded
             self.startTail()
@@ -106,6 +121,7 @@ final class Conversation: Identifiable {
         guard !data.isEmpty else { return }
         parser.consume(data); tailOffset = end
         messages = parser.messages
+        seedAgentsFromHistory()
         if let t = parser.customTitle { title = t }
         contextTokens = parser.contextTokens > 0 ? parser.contextTokens : contextTokens
         updatedAt = Date()
@@ -172,6 +188,7 @@ final class Conversation: Identifiable {
     func stop() {
         stopRequested = true
         approvals.removeAll()
+        if !drainAfterStop { restoreQueueToDraft() }      // Esc pulls queued messages back into the input, like Claude Code
         runner?.interrupt()
         // If the CLI doesn't honour the interrupt quickly, kill it; the session resumes on the next send.
         // Tied to this turn: a prompt sent after a successful stop must not be killed by this timer.
@@ -182,7 +199,53 @@ final class Conversation: Identifiable {
             self.runner?.stop(); self.runner = nil
             self.isRunning = false
             self.messages.append(ChatMessage(role: .assistant, blocks: [Block(kind: .notice, text: "Stopped")]))
+            if self.drainAfterStop { self.drainAfterStop = false; self.drainQueue() }
         }
+    }
+
+    // MARK: Message queue
+
+    @discardableResult
+    func enqueue(_ raw: String, images: [NSImage] = []) -> Bool {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !(text.isEmpty && images.isEmpty) else { return false }
+        queue.append(QueuedMessage(text: text, images: images))
+        return true
+    }
+
+    /// Sends the oldest queued message if nothing is running. A message that can't be sent right now stays queued.
+    func drainQueue() {
+        guard !isRunning, loadState != .loading, let m = queue.first else { return }
+        if send(m.text, images: m.images) { queue.removeAll { $0.id == m.id } }
+    }
+
+    func unqueue(_ id: UUID) {
+        queue.removeAll { $0.id == id }
+    }
+
+    /// Pull one queued message back into the composer for editing.
+    func editQueued(_ id: UUID) {
+        guard let m = queue.first(where: { $0.id == id }) else { return }
+        unqueue(id)
+        if !m.text.isEmpty { draftAppend.append(m.text) }
+        draftImages += m.images
+    }
+
+    func restoreQueueToDraft() {
+        for m in queue {
+            if !m.text.isEmpty { draftAppend.append(m.text) }
+            draftImages += m.images
+        }
+        queue = []
+    }
+
+    /// Interrupt the current turn and run this queued message next (the rest stay queued behind it).
+    func sendQueuedNow(_ id: UUID) {
+        guard let i = queue.firstIndex(where: { $0.id == id }) else { return }
+        queue.insert(queue.remove(at: i), at: 0)
+        guard isRunning else { drainQueue(); return }
+        drainAfterStop = true
+        stop()
     }
 
     private func startRunner() throws {
@@ -291,6 +354,7 @@ final class Conversation: Identifiable {
     // MARK: Event handling (stream-json)
 
     func handle(_ e: [String: Any]) {
+        trackAgents(e)
         let parent = e["parent_tool_use_id"]
         let isSub = parent != nil && !(parent is NSNull)
         switch e["type"] as? String {
@@ -341,10 +405,15 @@ final class Conversation: Identifiable {
         else if e["is_error"] as? Bool == true || (sub != "success" && !sub.isEmpty) {
             fail(text.isEmpty ? "The run ended with an error (\(sub))." : text)
         } else if !turnHadAssistant, !text.isEmpty {
-            card(lastPrompt, text)       // a slash command's own output, e.g. /context or /usage
+            card(lastPrompt, Limits.clip(text))       // a slash command's own output, e.g. /context or /usage
         }
+        let failed = e["is_error"] as? Bool == true || (sub != "success" && !sub.isEmpty)
+        let wasStopped = stopRequested
         isRunning = false; turnStart = nil; approvals.removeAll(); retryNote = nil; stopRequested = false
         updatedAt = Date()
+        // A clean finish continues with the queue. A stop or an error leaves it alone (a stop already handed it back).
+        if drainAfterStop { drainAfterStop = false; drainQueue() }
+        else if !failed, !wasStopped { drainQueue() }
     }
 
     private func handleStream(_ ev: [String: Any]) {
@@ -403,7 +472,7 @@ final class Conversation: Identifiable {
             var out = ""
             if let s = c["content"] as? String { out = s }
             else if let arr = c["content"] as? [[String: Any]] { out = arr.compactMap { $0["text"] as? String }.joined(separator: "\n") }
-            messages[mi].blocks[bi].result = out
+            messages[mi].blocks[bi].result = Limits.clip(out)
             messages[mi].blocks[bi].isError = c["is_error"] as? Bool ?? false
         }
     }

@@ -9,19 +9,27 @@ struct MessageView: View {
     var body: some View {
         switch message.role {
         case .user:
-            VStack(alignment: .trailing, spacing: 6) {
-                ForEach(message.blocks) { b in
-                    if b.kind == .image, let d = b.imageData, let img = NSImage(data: d) {
-                        Image(nsImage: img).resizable().scaledToFit().frame(maxHeight: 180)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    } else if b.kind == .text {
-                        Text(b.text).textSelection(.enabled).lineSpacing(3)
-                            .padding(.horizontal, 16).padding(.vertical, 11)
-                            .panel(RoundedRectangle(cornerRadius: 10), tint: HTB.green.opacity(0.09), border: HTB.green.opacity(0.4))
+            let parts = message.blocks.map { b -> (notes: [TaskNotification], rest: String) in b.kind == .text ? TaskNotification.split(b.text) : ([], "") }
+            let notes = parts.flatMap(\.notes)
+            if !notes.isEmpty {
+                VStack(alignment: .leading, spacing: 6) { ForEach(notes) { TaskNotificationRow(note: $0) } }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if notes.isEmpty || parts.contains(where: { !$0.rest.isEmpty }) || message.blocks.contains(where: { $0.kind == .image }) {
+                VStack(alignment: .trailing, spacing: 6) {
+                    ForEach(Array(message.blocks.enumerated()), id: \.element.id) { i, b in
+                        if b.kind == .image, let d = b.imageData, let img = NSImage(data: d) {
+                            Image(nsImage: img).resizable().scaledToFit().frame(maxHeight: 180)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                        } else if b.kind == .text, !parts[i].rest.isEmpty {
+                            Text(parts[i].rest).textSelection(.enabled).lineSpacing(3)
+                                .padding(.horizontal, 16).padding(.vertical, 11)
+                                .panel(RoundedRectangle(cornerRadius: 10), tint: HTB.green.opacity(0.09), border: HTB.green.opacity(0.4))
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .trailing).padding(.leading, 80)
             }
-            .frame(maxWidth: .infinity, alignment: .trailing).padding(.leading, 80)
         case .assistant:
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(message.blocks) { b in
@@ -39,6 +47,44 @@ struct MessageView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+/// A finished background agent, as one quiet line. Click to see the raw notification Claude received.
+struct TaskNotificationRow: View {
+    let note: TaskNotification
+    @State private var open = false
+
+    private var style: (icon: String, color: Color) {
+        switch note.status.lowercased() {
+        case "completed", "done", "success": ("checkmark.circle.fill", HTB.green)
+        case "failed", "error": ("xmark.circle.fill", HTB.red)
+        case "killed", "stopped", "cancelled", "canceled": ("stop.circle.fill", HTB.amber)
+        default: ("circle.dotted", HTB.cyan)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 9) {
+                Image(systemName: style.icon).foregroundStyle(style.color)
+                Text(note.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                if !note.detail.isEmpty { Text(note.detail).font(.system(size: 11.5, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1) }
+                Spacer(minLength: 8)
+                if let f = note.outputFile, FileManager.default.fileExists(atPath: f) {
+                    Button("Log") { FilePolicy.openOrReveal(f) }.buttonStyle(HTBSecondary()).controlSize(.small).help("Open the agent's output")
+                }
+                Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(.tertiary).rotationEffect(.degrees(open ? 90 : 0))
+            }
+            .contentShape(Rectangle()).onTapGesture { withAnimation(.snappy(duration: 0.18)) { open.toggle() } }
+            if open {
+                Text(note.raw).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
+                    .padding(10).frame(maxWidth: .infinity, alignment: .leading).background(.black.opacity(0.26), in: RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading).glassCard(10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Background agent \(note.status): \(note.title). \(note.detail)")
     }
 }
 
@@ -127,14 +173,15 @@ struct ThinkingView: View {
 }
 
 struct Shimmer: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var on = false
     var body: some View {
         HStack(spacing: 5) {
             ForEach(0..<3) { i in
                 Circle().fill(.secondary).frame(width: 6, height: 6)
-                    .opacity(on ? 1 : 0.25)
-                    .animation(.easeInOut(duration: 0.6).repeatForever().delay(Double(i) * 0.15), value: on)
+                    .opacity(reduceMotion || on ? 1 : 0.25)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.6).repeatForever().delay(Double(i) * 0.15), value: on)
             }
-        }.onAppear { on = true }
+        }.onAppear { on = true }.accessibilityLabel("Claude is working")
     }
 }

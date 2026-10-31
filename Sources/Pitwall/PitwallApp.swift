@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct PitwallApp: App {
     @State private var store = Store.shared
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
         WindowGroup {
@@ -42,11 +43,16 @@ struct PitwallApp: App {
                 Button("Previous Tab (Control-Shift-Tab)") { store.cycleTab(-1) }.keyboardShortcut(.tab, modifiers: [.control, .shift])
             }
             CommandGroup(replacing: .help) {
+                Button("Copy Diagnostics") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(AppInfo.diagnostics(store: store), forType: .string)
+                }
                 if let url = AppInfo.repoURL {
                     Link("Pitwall on GitHub", destination: url)
                     Link("Report an Issue", destination: url.appending(path: "issues/new/choose"))
                 }
             }
         }
+        Settings { SettingsView().environment(store) }
     }
 }

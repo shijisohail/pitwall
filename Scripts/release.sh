@@ -9,8 +9,22 @@
 #   NOTARY_KEY_PATH + NOTARY_KEY_ID + NOTARY_ISSUER   an App Store Connect API key (what CI uses)
 # Optional:
 #   SKIP_NOTARIZE=1  sign and package only (for a dry run)
+#   UNSIGNED=1       no Apple Developer account: ad-hoc signed DMG, no notarization
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+# No Apple Developer account? UNSIGNED=1 builds the same DMG, ad-hoc signed and not notarized.
+# It runs fine on the Mac that built it; on other Macs Gatekeeper asks the user to approve it (see README).
+if [[ "${UNSIGNED:-0}" == "1" ]]; then
+  export BUNDLE_ID="${BUNDLE_ID:-io.github.shijisohail.pitwall}"
+  VERSION="${VERSION:-$(tr -d '[:space:]' < VERSION)}"; export VERSION
+  echo "==> UNSIGNED build: ad-hoc signed, not notarized"
+  SIGN_IDENTITY=- Scripts/build.sh      # explicit: a release is never signed with the local development identity
+  Scripts/make-dmg.sh
+  ( cd dist && shasum -a 256 "Pitwall-$VERSION.dmg" > "Pitwall-$VERSION.dmg.sha256" )
+  ls -la dist
+  exit 0
+fi
 
 : "${SIGN_IDENTITY:?set SIGN_IDENTITY to your Developer ID Application identity}"
 : "${BUNDLE_ID:?set BUNDLE_ID}"

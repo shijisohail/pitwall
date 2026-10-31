@@ -121,7 +121,7 @@ final class TranscriptParser {
         var out = ""
         if let s = c["content"] as? String { out = s }
         else if let parts = c["content"] as? [[String: Any]] { out = parts.compactMap { $0["text"] as? String }.joined(separator: "\n") }
-        messages[mi].blocks[bi].result = out
+        messages[mi].blocks[bi].result = Limits.clip(out)
         messages[mi].blocks[bi].isError = c["is_error"] as? Bool ?? false
     }
 

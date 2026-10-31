@@ -4,7 +4,17 @@ Releases are built, signed with a **Developer ID Application** certificate, nota
 
 > Pitwall is distributed **outside the Mac App Store** (it cannot be sandboxed; see [ARCHITECTURE.md](ARCHITECTURE.md)).
 
-## One-time setup
+## No Apple Developer account? Ship an unsigned DMG
+
+You can publish without signing or notarizing:
+
+```sh
+UNSIGNED=1 Scripts/release.sh        # dist/Pitwall-<version>.dmg and .sha256 (ad-hoc signed)
+```
+
+The release workflow does the same automatically when the `DEVELOPER_ID_CERT_P12_BASE64` secret is not set, and marks the GitHub release as a **pre-release**. The DMG runs normally on the Mac that built it. On other Macs Gatekeeper blocks it until the user approves it under *System Settings → Privacy & Security → Open Anyway* (instructions are in the README). Add signing later without changing anything else: set the secrets below and the same workflow switches to Developer ID + notarization.
+
+## One-time setup (signed releases)
 
 1. **Apple Developer Program** membership.
 2. **Developer ID Application certificate.** Create it in your developer account, install it in Keychain Access, then export it as a `.p12` with a password.
@@ -51,6 +61,19 @@ shasum -a 256 -c Pitwall-X.Y.Z.dmg.sha256
 SIGN_IDENTITY="Developer ID Application: …" BUNDLE_ID=com.you.pitwall SKIP_NOTARIZE=1 Scripts/release.sh
 ```
 
+## Going public checklist
+
+Settings that cannot be changed from a pull request:
+
+- [ ] **Make the repository public** (Settings → General → Danger Zone). Until then release downloads need a GitHub login.
+- [ ] **Social preview:** Settings → General → *Social preview* → upload `docs/assets/social-preview.png` (1280×640). GitHub has no API for this. Regenerate it with `Scripts/make-social-preview.swift`.
+- [ ] **Topics and description** are already set (20 topics). Revisit them if the product changes.
+- [ ] **GitHub Pages:** Settings → Pages → *Deploy from a branch* → `main` / `/docs`. The landing page is `docs/index.html` and is served at `https://shijisohail.github.io/pitwall/`. Then set the repository *Website* to that URL, and link it from the README.
+- [ ] **Search Console:** add the Pages URL as a property and submit `https://shijisohail.github.io/pitwall/sitemap.xml`.
+- [ ] **Branch protection** on `main`: require the `build-and-test` check and a pull request.
+- [ ] **Private vulnerability reporting:** Settings → Code security, so [SECURITY.md](../SECURITY.md) and the Code of Conduct contact work.
+- [ ] Optional: enable **Discussions** for questions, and pin the v1.0.0 release.
+
 ## Release checklist
 
 - [ ] `swift test` and `Scripts/build.sh` pass; CI is green
@@ -58,3 +81,9 @@ SIGN_IDENTITY="Developer ID Application: …" BUNDLE_ID=com.you.pitwall SKIP_NOT
 - [ ] README screenshots and `PRIVACY.md` still accurate
 - [ ] `docs/CLAUDE_CODE_PROTOCOL.md` verified against the current Claude Code version
 - [ ] Notarization and Gatekeeper checks above pass on a clean machine
+
+## Why signing matters for permissions
+
+macOS stores privacy answers (Documents, Downloads, network volumes, Full Disk Access) against the app's code identity. A **Developer ID** build has a stable identity, so users are asked once and the answers survive updates. An **ad-hoc** (`UNSIGNED=1`) build is identified by the hash of its binary, which changes every release, so users are asked again after each update. That is the main practical reason to sign releases once there is an Apple Developer account.
+
+For local development, `Scripts/setup-local-signing.sh` creates a self-signed identity that `Scripts/build.sh` picks up automatically, so rebuilds on your own Mac stop re-asking.

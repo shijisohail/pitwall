@@ -1,6 +1,17 @@
 import Foundation
+import AppKit
 
 enum Role: String, Codable { case user, assistant }
+
+enum Limits {
+    /// One huge tool result (a big file read, a build log) must not balloon memory for every open session.
+    static let toolResult = 100_000
+
+    static func clip(_ s: String, to limit: Int = toolResult) -> String {
+        guard s.utf8.count > limit else { return s }
+        return String(s.prefix(limit)) + "\n… [truncated \(s.count - limit) more characters]"
+    }
+}
 
 struct Block: Identifiable, Codable, Hashable {
     enum Kind: String, Codable { case text, thinking, tool, error, notice, output, local, image }
@@ -118,6 +129,12 @@ struct Usage {
     var sevenDay: Double
     var fiveReset: Date?
     var sevenReset: Date?
+}
+
+struct QueuedMessage: Identifiable {
+    let id = UUID()
+    var text: String
+    var images: [NSImage] = []
 }
 
 // MARK: Pending approvals (control_request can_use_tool)

@@ -24,7 +24,18 @@ final class ClaudeRunner {
 
     var isAlive: Bool { process?.isRunning ?? false }
 
-    static let claudePath: String? = {
+    /// User-chosen path from Settings (validated when used). Tests also point this at a fake CLI.
+    nonisolated(unsafe) static var pathOverride: String?
+    nonisolated(unsafe) static var discoveryEnabled = true
+
+    static var claudePath: String? {
+        for candidate in [pathOverride, ProcessInfo.processInfo.environment["PITWALL_CLAUDE_PATH"]] {
+            if let c = candidate, !c.isEmpty, FileManager.default.isExecutableFile(atPath: c) { return c }
+        }
+        return discoveryEnabled ? discovered : nil
+    }
+
+    private static let discovered: String? = {
         let home = NSHomeDirectory()
         for p in ["\(home)/.local/bin/claude", "/opt/homebrew/bin/claude", "/usr/local/bin/claude"]
         where FileManager.default.isExecutableFile(atPath: p) { return p }

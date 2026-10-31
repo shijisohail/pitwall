@@ -29,7 +29,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). In short: `Sources/Pitwall` ho
 
 1. Open an issue first for anything larger than a bug fix, so we can agree on the approach.
 2. Keep the diff focused. Match the surrounding code's naming, comment density and idioms; the project builds in Swift 5 language mode and UI/state types are `@MainActor`.
-3. Add or update tests for logic changes (parsing, store rules, command routing). UI-only changes: describe how you checked them and attach a screenshot.
+3. Add or update tests for logic changes (parsing, store rules, command routing, event handling). Protocol-level behaviour can be tested end to end with the fake CLI in `Tests/PitwallTests/TestSupport.swift` (`withFakeClaude`). UI-only changes: describe how you checked them and attach a screenshot.
 4. Never log or persist prompts, file paths or transcript content (`Log` keeps dynamic strings private). Never add network calls or telemetry without an issue and an explicit opt-in design.
 5. Anything that builds a shell command must quote untrusted values with `TerminalApp.quote`.
 6. Update `CHANGELOG.md` under **Unreleased**.

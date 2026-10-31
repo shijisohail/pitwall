@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pitwall: a native macOS app for Claude Code (GUI for Mac)</title>
+<meta name="description" content="Pitwall is a free, open-source Mac app for Claude Code. Run many sessions in tabs, approve tool requests in one click, queue messages while Claude works, and see every change live.">
+<link rel="canonical" href="https://shijisohail.github.io/pitwall/">
+<meta name="theme-color" content="#070b12">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/png" href="assets/icon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="preload" href="assets/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Pitwall">
+<meta property="og:title" content="Pitwall: a native macOS app for Claude Code">
+<meta property="og:description" content="See every Claude Code session on one board. Approve requests in one click, queue messages while Claude works, and watch every change land. Free and open source.">
+<meta property="og:url" content="https://shijisohail.github.io/pitwall/">
+<meta property="og:image" content="https://shijisohail.github.io/pitwall/assets/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Pitwall: a board of Claude Code sessions grouped as Working, Needs you and Done">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pitwall: a native macOS app for Claude Code">
+<meta name="twitter:description" content="See every Claude Code session on one board. Approve requests in one click, queue messages while Claude works, and watch every change land. Free and open source.">
+<meta name="twitter:image" content="https://shijisohail.github.io/pitwall/assets/social-preview.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Pitwall",
+  "alternateName": "Pitwall for Claude Code",
+  "description": "A free, open-source native macOS app for Claude Code: run many sessions in tabs, approve tool requests in one click, queue messages while Claude works, and see every change live.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS 26 or later",
+  "softwareVersion": "1.1.1",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "downloadUrl": "https://github.com/shijisohail/pitwall/releases/latest",
+  "installUrl": "https://github.com/shijisohail/pitwall/releases/latest",
+  "codeRepository": "https://github.com/shijisohail/pitwall",
+  "image": "https://shijisohail.github.io/pitwall/assets/social-preview.png",
+  "author": { "@type": "Person", "name": "shijisohail", "url": "https://github.com/shijisohail" }
+}
+</script>
+
+<style>
+  @font-face { font-family: "Barlow Condensed"; font-weight: 600; font-style: normal; font-display: swap; src: url("assets/fonts/barlow-condensed-600.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: normal; font-display: swap; src: url("assets/fonts/barlow-condensed-700.woff2") format("woff2"); }
+
+  :root {
+    --ink: #070b12;       /* ground */
+    --panel: #0e141d;     /* timing tower */
+    --raised: #151d29;
+    --line: #243044;
+    --text: #e8edf6;
+    --muted: #97a3b8;
+    --go: #9fef00;        /* working */
+    --wait: #ffb000;      /* needs you */
+    --best: #b980ff;      /* finished */
+    --info: #5cb2ff;
+    --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--text); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--text); text-decoration-color: var(--line); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--go); }
+  :focus-visible { outline: 2px solid var(--info); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
+  code, kbd { font-family: var(--mono); font-size: .86em; background: var(--raised); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
+
+  /* Header */
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font: 700 26px/1 var(--display); letter-spacing: .02em; text-decoration: none; }
+  .brand img { width: 34px; height: 34px; border-radius: 8px; }
+  nav { display: flex; align-items: center; gap: 24px; font-size: 15px; }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: 600 15px/1 system-ui, sans-serif; text-decoration: none; cursor: pointer; transition: border-color .15s, background .15s; }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--go); border-color: var(--go); color: #0b1200; font-weight: 700; }
+  .btn.primary:hover { background: #b4ff2a; }
+  .btn.small { padding: 9px 14px; font-size: 14px; }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; padding: 44px 0 72px; }
+  .hero h1 { font-size: clamp(52px, 6.4vw, 86px); line-height: .92; letter-spacing: -.01em; }
+  .hero h1 span { display: block; color: var(--muted); }
+  .hero p.lead { max-width: 30em; margin: 24px 0 30px; color: var(--muted); font-size: 19px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+  .fine { margin: 18px 0 0; color: var(--muted); font-size: 14px; }
+
+  /* Timing tower */
+  .tower { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.55); overflow: hidden; }
+  .tower-bar { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--raised); }
+  .tower-bar i { width: 11px; height: 11px; border-radius: 50%; background: #3a465b; }
+  .tower-bar b { margin-left: 8px; font: 700 13px/1 var(--display); letter-spacing: .08em; color: var(--muted); }
+  .tower-bar button { margin-left: auto; background: none; border: 0; color: var(--muted); font: 13px/1 system-ui, sans-serif; cursor: pointer; padding: 4px 6px; border-radius: 4px; }
+  .tower-bar button:hover { color: var(--text); }
+  .row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 14px 16px 14px 0; border-bottom: 1px solid var(--line); position: relative; }
+  .row:last-child { border-bottom: 0; }
+  .row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--sig, var(--line)); }
+  .row[data-state="working"] { --sig: var(--go); }
+  .row[data-state="wait"] { --sig: var(--wait); background: rgba(255,176,0,.06); }
+  .row[data-state="done"] { --sig: var(--best); }
+  .row[data-state="denied"] { --sig: #ff5d5d; }
+  .pos { text-align: center; font: 700 26px/1 var(--display); color: var(--muted); padding-left: 4px; }
+  .name { font-weight: 600; font-size: 15.5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .where { color: var(--muted); font: 12.5px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status { text-align: right; font: 700 18px/1 var(--display); letter-spacing: .04em; color: var(--sig, var(--muted)); white-space: nowrap; }
+  .clock { display: block; margin-top: 4px; color: var(--muted); font: 12.5px/1 var(--mono); letter-spacing: 0; font-weight: 400; }
+  .ask { grid-column: 2 / 4; margin-top: 8px; }
+  .ask code { display: block; white-space: pre-wrap; background: #05080d; border-color: var(--line); color: var(--wait); padding: 8px 10px; border-radius: 8px; font-size: 12.5px; }
+  .ask .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .ask button { font: 600 13px/1 system-ui, sans-serif; padding: 8px 14px; border-radius: 7px; border: 1px solid var(--line); background: var(--raised); color: var(--text); cursor: pointer; }
+  .ask button:hover { border-color: var(--muted); }
+  .ask button.allow { background: var(--go); border-color: var(--go); color: #0b1200; font-weight: 700; }
+  .ask button.allow:hover { background: #b4ff2a; }
+  .ask button.deny:hover { border-color: #ff5d5d; color: #ff8a8a; }
+  .tower-note { margin: 12px 4px 0; color: var(--muted); font-size: 13px; }
+
+  /* Sectors */
+  section { padding: 72px 0; border-top: 1px solid var(--line); }
+  .sector { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 56px; padding: 40px 0; border-top: 1px solid var(--line); }
+  .sector:first-of-type { border-top: 0; padding-top: 8px; }
+  .sector h3 { font-size: 46px; line-height: 1; color: var(--sig); }
+  .sector .what { margin: 10px 0 0; color: var(--muted); }
+  .sector[data-s="watch"] { --sig: var(--go); }
+  .sector[data-s="decide"] { --sig: var(--wait); }
+  .sector[data-s="review"] { --sig: var(--best); }
+  .items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; margin: 0; padding: 0; list-style: none; }
+  .items li { padding-left: 16px; border-left: 2px solid var(--sig); }
+  .items strong { display: block; font-size: 17px; margin-bottom: 4px; }
+  .items span { color: var(--muted); font-size: 15.5px; }
+  h2.sec { font-size: clamp(38px, 5vw, 56px); line-height: 1; max-width: 16em; }
+  p.sub { color: var(--muted); max-width: 40em; margin: 14px 0 36px; }
+
+  /* New in 1.1 */
+  .new { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 56px; }
+  .new ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .new li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: baseline; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .new li:last-child { border-bottom: 0; }
+  .new li b { font: 700 20px/1.1 var(--display); letter-spacing: .02em; }
+  .new li span { color: var(--muted); font-size: 15.5px; }
+
+  /* Install */
+  .install { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; }
+  ol.steps { margin: 0; padding-left: 22px; }
+  ol.steps li { margin: 0 0 14px; padding-left: 6px; }
+  ol.steps li::marker { font: 700 20px var(--display); color: var(--go); }
+  pre { margin: 14px 0 0; background: #05080d; border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; overflow-x: auto; font: 14px/1.7 var(--mono); color: var(--text); }
+  pre .c { color: var(--muted); }
+  .req { color: var(--muted); font-size: 15px; margin: 0 0 18px; }
+
+  /* FAQ */
+  .faq { max-width: 760px; }
+  details { border-top: 1px solid var(--line); padding: 16px 0; }
+  details:last-of-type { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; font-weight: 600; font-size: 17px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font: 700 24px/1 var(--display); color: var(--muted); transition: transform .15s; }
+  details[open] summary::after { transform: rotate(45deg); color: var(--go); }
+  details p { margin: 10px 0 0; color: var(--muted); max-width: 40em; }
+
+  footer { border-top: 1px solid var(--line); padding: 32px 0 56px; color: var(--muted); font-size: 14px; }
+  footer p { margin: 0 0 8px; }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 920px) {
+    .hero { grid-template-columns: minmax(0, 1fr); gap: 40px; padding-top: 24px; }
+    .sector, .new, .install { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .items { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 600px) {
+    nav a:not(.btn) { display: none; }
+    section { padding: 52px 0; }
+    .row { grid-template-columns: 34px minmax(0, 1fr); padding-right: 12px; }
+    .status { grid-column: 2; text-align: left; display: flex; gap: 10px; align-items: baseline; }
+    .clock { display: inline; margin: 0; }
+    .ask { grid-column: 2; }
+    .new li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="./"><img src="assets/icon.png" alt="" width="34" height="34">Pitwall</a>
+    <nav aria-label="Primary">
+      <a href="#features">Features</a>
+      <a href="#whats-new">What's new</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/shijisohail/pitwall">GitHub</a>
+      <a class="btn primary small" href="https://github.com/shijisohail/pitwall/releases/latest">Download</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <h1>See every session.<span>Answer the ones that wait.</span></h1>
+        <p class="lead">Pitwall is a free Mac app for Claude Code. Run sessions side by side, approve requests in one click, and watch each change land, from one board.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/shijisohail/pitwall/releases/latest">Download for macOS</a>
+          <a class="btn" href="https://github.com/shijisohail/pitwall">View source on GitHub</a>
+        </div>
+        <p class="fine">Version 1.1.1. Needs macOS 26 or later and Claude Code. MIT license, no telemetry.</p>
+      </div>
+
+      <div>
+        <div class="tower" role="group" aria-label="Interactive example of the Pitwall board">
+          <div class="tower-bar"><i></i><i></i><i></i><b>PIT WALL</b><button type="button" id="reset" aria-label="Reset the example">Reset</button></div>
+          <div id="rows" aria-live="polite"></div>
+        </div>
+        <p class="tower-note">An illustration with sample sessions. Try the buttons on the amber row.</p>
+      </div>
+    </div>
+
+    <section id="features">
+      <h2 class="sec">Built around how a session actually goes</h2>
+      <p class="sub">Pitwall drives your own <code>claude</code> command, so your login, settings, skills, plugins and MCP servers all carry over.</p>
+
+      <div class="sector" data-s="watch">
+        <div><h3>Watch</h3><p class="what">Know what every session is doing without opening it.</p></div>
+        <ul class="items">
+          <li><strong>One board for everything</strong><span>Sessions sorted into Working, Needs you and Done today, with a live feed of recent steps, to-do progress and cost.</span></li>
+          <li><strong>Tabs, many sessions at once</strong><span>Browser-style tabs. Closing one never stops a session; it keeps working in the background.</span></li>
+          <li><strong>Your real history</strong><span>Reads Claude Code's own transcripts, so terminal sessions show up here and the other way round.</span></li>
+          <li><strong>Only the folders you open</strong><span>Pitwall loads just the projects you choose. Closing one hides it; nothing is deleted.</span></li>
+        </ul>
+      </div>
+
+      <div class="sector" data-s="decide">
+        <div><h3>Decide</h3><p class="what">Answer Claude fast, from wherever you are.</p></div>
+        <ul class="items">
+          <li><strong>Approve in one click</strong><span>Permissions, questions and plans arrive as cards, with the full command or diff in view and "always allow" for what you trust.</span></li>
+          <li><strong>Keep typing while Claude works</strong><span>Messages queue up and send one at a time as each turn ends. Send one now, edit it, or take it back.</span></li>
+          <li><strong>Switch modes from the keyboard</strong><span>Shift-Tab steps through ask, accept edits and plan, like the terminal. Full access never hides behind a shortcut.</span></li>
+          <li><strong>Every command, native where it counts</strong><span>A slash menu with your commands and skills, <code>@</code> file mentions, <code>!</code> shell commands and image paste.</span></li>
+        </ul>
+      </div>
+
+      <div class="sector" data-s="review">
+        <div><h3>Review</h3><p class="what">See exactly what changed, and show Claude what you mean.</p></div>
+        <ul class="items">
+          <li><strong>Live changes</strong><span>A running diff of every file Claude edits, beside the plan, context usage and files touched.</span></li>
+          <li><strong>Drop in screenshots</strong><span>Drag images or files anywhere on the chat. Images attach; other files become <code>@</code> mentions.</span></li>
+          <li><strong>Background agents, summarized</strong><span>When a helper agent finishes, you get a one-line result with its time, tools and tokens.</span></li>
+          <li><strong>Private by design</strong><span>No telemetry, no account, and no network connections of its own. Transcripts stay on your Mac.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="whats-new">
+      <div class="new">
+        <div>
+          <h2 class="sec">New in 1.1</h2>
+          <p class="sub">The latest release, shipped 31 October 2026.</p>
+          <a class="btn" href="https://github.com/shijisohail/pitwall/blob/main/CHANGELOG.md">Read the changelog</a>
+        </div>
+        <ul>
+          <li><b>Message queue</b><span>Type while Claude works. Messages go out in order, and Esc hands them back to you.</span></li>
+          <li><b>A real home</b><span>An idle board now offers a quick-start prompt, task shortcuts, project cards and recent sessions.</span></li>
+          <li><b>Drag and drop</b><span>Screenshots, images and files, dropped anywhere on the chat.</span></li>
+          <li><b>Safer approvals</b><span>The board shows the whole command or diff before you allow it, and clicked paths never launch apps.</span></li>
+          <li><b>1.1.1</b><span>Fixes a crash when attached images were cleared while the composer was updating.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2 class="sec">Install in a minute</h2>
+      <p class="sub req">Requires macOS 26 (Tahoe) or later and <a href="https://docs.claude.com/en/docs/claude-code/setup">Claude Code</a>, installed and signed in.</p>
+      <div class="install">
+        <div>
+          <ol class="steps">
+            <li><a href="https://github.com/shijisohail/pitwall/releases/latest">Download the latest <code>.dmg</code></a> and open it.</li>
+            <li>Drag <strong>Pitwall</strong> onto <strong>Applications</strong>.</li>
+            <li>Open it. macOS will say it can't verify the developer, because this open-source build isn't notarized. Go to <strong>System Settings, Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>.</li>
+            <li>Click <strong>Choose Folder</strong> and pick a project.</li>
+          </ol>
+        </div>
+        <div>
+          <p style="margin:0;color:var(--muted)">Prefer the terminal? Skip the warning by clearing the quarantine flag, or build it yourself. A copy you build on your own Mac never shows the warning.</p>
+<pre><span class="c"># clear the quarantine flag</span>
+xattr -dr com.apple.quarantine /Applications/Pitwall.app
+
+<span class="c"># or build from source</span>
+git clone https://github.com/shijisohail/pitwall
+cd pitwall &amp;&amp; Scripts/build.sh run</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <h2 class="sec">Questions</h2>
+      <div class="faq" style="margin-top:32px">
+        <details><summary>Does Pitwall replace Claude Code?</summary><p>No. It is a front end. Your <code>claude</code> command does all the work; Pitwall adds a board, tabs and one-click approvals around it.</p></details>
+        <details><summary>Does it cost anything or need a separate login?</summary><p>No. It is free and uses the Claude Code installation and account you already have.</p></details>
+        <details><summary>Is it affiliated with Anthropic?</summary><p>No. Pitwall is an independent community project. "Claude" and "Claude Code" are trademarks of Anthropic.</p></details>
+        <details><summary>Is my code or conversation sent anywhere?</summary><p>Pitwall makes no network connections of its own and has no telemetry. Your prompts go to Anthropic only through the <code>claude</code> process, under Claude Code's own terms. This website loads no trackers, fonts or scripts from other sites.</p></details>
+        <details><summary>Why isn't it in the Mac App Store?</summary><p>Launching your <code>claude</code> command and reading <code>~/.claude</code> are impossible inside the App Sandbox, which the App Store requires.</p></details>
+        <details><summary>Does it work on Intel Macs?</summary><p>Yes. The release is universal, for Apple silicon and Intel, as long as the Mac runs macOS 26 or later.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p><a href="https://github.com/shijisohail/pitwall">Source on GitHub</a>, <a href="https://github.com/shijisohail/pitwall/releases">releases</a>, <a href="https://github.com/shijisohail/pitwall/issues/new/choose">report a bug</a>, <a href="https://github.com/shijisohail/pitwall/blob/main/PRIVACY.md">privacy</a>. MIT license.</p>
+    <p>Pitwall is an independent project and is not affiliated with or endorsed by Anthropic.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // Sample sessions for the illustration. Clock values are seconds elapsed.
+  var START = [
+    { name: "Fix flaky checkout test", where: "api-server  fix/checkout-flake", state: "working", t: 252, step: "Edit tests/checkout.spec.ts" },
+    { name: "Migrate billing to Stripe v2", where: "billing  main", state: "wait", t: 95, ask: "$ npm run db:migrate -- --env staging" },
+    { name: "Review the open pull requests", where: "platform  main", state: "working", t: 700, step: "gh pr view 794" },
+    { name: "Add dark mode to settings", where: "web  feature/dark-mode", state: "done", note: "4 files  +142 -38" },
+    { name: "Explain the auth flow", where: "docs  main", state: "done", note: "no changes" }
+  ];
+  var sessions, rowsEl = document.getElementById("rows");
+  function clone() { return JSON.parse(JSON.stringify(START)); }
+  function mmss(s) { var m = Math.floor(s / 60), r = s % 60; return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function label(s) {
+    return { working: "Working", wait: "Needs you", done: "Done", denied: "Stopped" }[s.state];
+  }
+
+  function render() {
+    rowsEl.textContent = "";
+    sessions.forEach(function (s, i) {
+      var row = el("div", "row"); row.dataset.state = s.state;
+      row.appendChild(el("div", "pos", String(i + 1)));
+      var mid = el("div"); mid.appendChild(el("div", "name", s.name)); mid.appendChild(el("div", "where", s.state === "working" && s.step ? s.step : s.where));
+      row.appendChild(mid);
+      var st = el("div", "status", label(s));
+      var clock = el("span", "clock", s.state === "done" ? (s.note || "") : mmss(s.t || 0));
+      clock.dataset.i = i; st.appendChild(clock); row.appendChild(st);
+      if (s.state === "wait") {
+        var ask = el("div", "ask");
+        ask.appendChild(el("code", null, s.ask));
+        var acts = el("div", "acts");
+        [["Allow", "allow"], ["Always", ""], ["Deny", "deny"]].forEach(function (b) {
+          var btn = el("button", b[1], b[0]); btn.type = "button";
+          btn.addEventListener("click", function () { decide(i, b[0] === "Deny"); });
+          acts.appendChild(btn);
+        });
+        ask.appendChild(acts); row.appendChild(ask);
+      }
+      rowsEl.appendChild(row);
+    });
+  }
+
+  function decide(i, deny) {
+    var s = sessions[i];
+    if (deny) { s.state = "denied"; s.where = "You denied npm run db:migrate"; }
+    else { s.state = "working"; s.step = "$ npm run db:migrate"; s.t = 0; }
+    delete s.ask; render();
+    var next = rowsEl.querySelector(".row:nth-child(" + (i + 1) + ")"); if (next) next.scrollIntoView({ block: "nearest" });
+  }
+
+  setInterval(function () {
+    sessions.forEach(function (s, i) {
+      if (s.state === "working" || s.state === "wait") s.t++;
+      var c = rowsEl.querySelector('.clock[data-i="' + i + '"]');
+      if (c && (s.state === "working" || s.state === "wait")) c.textContent = mmss(s.t);
+    });
+  }, 1000);
+
+  document.getElementById("reset").addEventListener("click", function () { sessions = clone(); render(); });
+  sessions = clone(); render();
+})();
+</script>
+</body>
+</html>

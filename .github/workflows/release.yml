@@ -21,7 +21,15 @@ jobs:
       - name: Test
         run: swift test
 
+      - name: Detect signing credentials
+        id: creds
+        env:
+          CERT: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 }}
+        run: |
+          if [ -n "$CERT" ]; then echo "signed=true" >> "$GITHUB_OUTPUT"; else echo "signed=false" >> "$GITHUB_OUTPUT"; fi
+
       - name: Import the Developer ID certificate
+        if: steps.creds.outputs.signed == 'true'
         env:
           CERT_P12_BASE64: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
@@ -39,6 +47,7 @@ jobs:
           rm -f "$RUNNER_TEMP/cert.p12"
 
       - name: Build, sign, notarize, staple
+        if: steps.creds.outputs.signed == 'true'
         env:
           SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
           BUNDLE_ID: ${{ vars.BUNDLE_ID }}
@@ -54,8 +63,36 @@ jobs:
           Scripts/release.sh
           rm -f "$NOTARY_KEY_PATH"
 
+      - name: Build unsigned DMG (no signing credentials configured)
+        if: steps.creds.outputs.signed != 'true'
+        env:
+          UNSIGNED: "1"
+          BUNDLE_ID: ${{ vars.BUNDLE_ID }}
+          PITWALL_REPO_URL: ${{ vars.PITWALL_REPO_URL }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: Scripts/release.sh
+
+      - name: Compose release notes
+        env:
+          SIGNED: ${{ steps.creds.outputs.signed }}
+        run: |
+          {
+            echo "## Install"
+            echo
+            echo "Download **Pitwall-${GITHUB_REF_NAME#v}.dmg**, open it, and drag **Pitwall** to Applications. You also need [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) installed and signed in."
+            echo
+            if [ "$SIGNED" = "true" ]; then
+              echo "This build is signed with a Developer ID certificate and notarized by Apple."
+            else
+              echo "> **Unsigned build.** This DMG is ad-hoc signed and **not notarized**, so macOS will block it the first time. To approve it: open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Pitwall (or run \`xattr -dr com.apple.quarantine /Applications/Pitwall.app\`). Verify the download against the attached \`.sha256\` file."
+            fi
+            echo
+            echo "---"
+          } > release-notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
+          body_path: release-notes.md
           files: |
             dist/*.dmg
             dist/*.sha256

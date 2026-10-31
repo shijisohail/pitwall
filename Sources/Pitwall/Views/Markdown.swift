@@ -3,12 +3,12 @@ import AppKit
 
 private enum MD: Identifiable {
     case para(Int, String), heading(Int, Int, String), bullet(Int, Int, String, String)
-    case code(Int, String, String), quote(Int, String), rule(Int)
+    case code(Int, String, String), quote(Int, String), rule(Int), table(Int, MarkdownTable)
 
     var id: Int {
         switch self {
         case .para(let i, _), .heading(let i, _, _), .bullet(let i, _, _, _),
-             .code(let i, _, _), .quote(let i, _), .rule(let i): i
+             .code(let i, _, _), .quote(let i, _), .rule(let i), .table(let i, _): i
         }
     }
 }
@@ -20,7 +20,12 @@ private func parse(_ text: String) -> [MD] {
     var lang = ""
     func flush() {
         if !para.isEmpty { out.append(.para(out.count, para.joined(separator: "\n"))); para = [] }
-        if !tbl.isEmpty { out.append(.code(out.count, "", tbl.joined(separator: "\n"))); tbl = [] }
+        if !tbl.isEmpty {
+            // A real table renders as a grid; anything pipe-shaped that isn't one stays as plain monospaced text.
+            if let t = MarkdownTable.parse(tbl) { out.append(.table(out.count, t)) }
+            else { out.append(.code(out.count, "", tbl.joined(separator: "\n"))) }
+            tbl = []
+        }
     }
     for line in text.components(separatedBy: "\n") {
         if code != nil {
@@ -88,11 +93,100 @@ struct MarkdownView: View {
                     Divider()
                 case .code(_, let lang, let s):
                     CodeBlock(lang: lang, code: s)
+                case .table(_, let t):
+                    TableView(table: t)
                 }
             }
         }
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Lays table cells (row-major, `columns` per row) out in columns sized by `MarkdownTable.fit` for the width it is
+/// actually offered, so long cells wrap instead of overflowing, and every cell in a row is as tall as the tallest.
+private struct TableLayout: Layout {
+    let columns: Int
+    let natural: [CGFloat]
+
+    private func widths(_ proposal: ProposedViewSize) -> [CGFloat] {
+        MarkdownTable.fit(natural: natural, avail: proposal.width ?? .infinity)
+    }
+    private func rowHeights(_ subviews: Subviews, _ w: [CGFloat]) -> [CGFloat] {
+        stride(from: 0, to: subviews.count, by: columns).map { start in
+            (0..<columns).map { c in
+                subviews[start + c].sizeThatFits(ProposedViewSize(width: w[c], height: nil)).height
+            }.max() ?? 0
+        }
+    }
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let w = widths(proposal)
+        return CGSize(width: w.reduce(0, +), height: rowHeights(subviews, w).reduce(0, +))
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let w = widths(ProposedViewSize(width: bounds.width, height: nil))
+        let h = rowHeights(subviews, w)
+        var y = bounds.minY
+        for (r, rowH) in h.enumerated() {
+            var x = bounds.minX
+            for c in 0..<columns {
+                subviews[r * columns + c].place(at: CGPoint(x: x, y: y), anchor: .topLeading,
+                                                proposal: ProposedViewSize(width: w[c], height: rowH))
+                x += w[c]
+            }
+            y += rowH
+        }
+    }
+}
+
+/// A pipe table drawn as a grid: bold header, per-column alignment, wrapping cells, faint zebra rows.
+struct TableView: View {
+    let table: MarkdownTable
+    private let padX: CGFloat = 12, padY: CGFloat = 7
+
+    private func frameAlign(_ a: MarkdownTable.Align) -> Alignment {
+        switch a { case .leading: .leading; case .center: .center; case .trailing: .trailing }
+    }
+    private func textAlign(_ a: MarkdownTable.Align) -> TextAlignment {
+        switch a { case .leading: .leading; case .center: .center; case .trailing: .trailing }
+    }
+
+    /// Single-line width of `text` as it will be drawn (markdown markers removed, a little slack for code spans).
+    private func measure(_ text: String, bold: Bool) -> CGFloat {
+        let plain = String(inline(text).characters)
+        let font = NSFont.systemFont(ofSize: 13.5, weight: bold ? .semibold : .regular)
+        return ceil((plain as NSString).size(withAttributes: [.font: font]).width * 1.04) + 4
+    }
+
+    private var natural: [CGFloat] {
+        table.header.indices.map { c in
+            ([measure(table.header[c], bold: true)] + table.rows.map { measure($0[c], bold: false) }).max()! + padX * 2
+        }
+    }
+
+    private func cell(_ text: String, col: Int, header: Bool, row: Int) -> some View {
+        Text(inline(text)).font(.system(size: 13.5, weight: header ? .semibold : .regular))
+            .foregroundStyle(header ? Color.primary : Color.primary.opacity(0.92))
+            .multilineTextAlignment(textAlign(table.aligns[col]))
+            .frame(maxWidth: .infinity, alignment: frameAlign(table.aligns[col]))
+            .padding(.horizontal, padX).padding(.vertical, padY)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(header ? Color.white.opacity(0.08) : (row.isMultiple(of: 2) ? Color.clear : Color.white.opacity(0.035)))
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(header ? 0.18 : 0.07)).frame(height: 1) }
+    }
+
+    var body: some View {
+        let n = table.header.count
+        TableLayout(columns: n, natural: natural) {
+            ForEach(0..<n, id: \.self) { c in cell(table.header[c], col: c, header: true, row: 0) }
+            ForEach(0..<table.rows.count, id: \.self) { r in
+                ForEach(0..<n, id: \.self) { c in cell(table.rows[r][c], col: c, header: false, row: r) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.black.opacity(0.22))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.12)))
     }
 }
 
