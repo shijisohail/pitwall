@@ -3,7 +3,9 @@ import Foundation
 @testable import Pitwall
 
 /// Agent tracking, driven by a real captured stream (see AgentsFixture.swift) and by hand-built events.
-@MainActor @Suite struct AgentTrackingTests {
+/// Serialized: the tests flip the shared `AppSettings.shared.showAgents`, and a test that awaits would otherwise
+/// see another test's value mid-run.
+@MainActor @Suite(.serialized) struct AgentTrackingTests {
     /// The Agent view is off by default, so tests that exercise tracking switch it on first.
     private func make(agentsOn: Bool = true) -> Conversation {
         AppSettings.shared.showAgents = agentsOn
