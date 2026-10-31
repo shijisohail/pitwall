@@ -3,7 +3,7 @@ import Foundation
 @testable import Pitwall
 
 /// Runs the real `ClaudeRunner`/`Conversation` against a fake CLI that speaks the stream-json protocol.
-/// Serialized: they swap the process-wide CLI path.
+/// Serialized, and it owns every test that changes the process-wide CLI path.
 @MainActor @Suite(.serialized) struct RunnerIntegrationTests {
     private func make() -> (Store, Conversation) {
         let s = makeStore()
@@ -15,64 +15,66 @@ import Foundation
         c.messages.last { $0.role == .assistant }?.blocks.compactMap { $0.kind == .text ? $0.text : nil }.joined() ?? ""
     }
 
-    @Test func controlRequestsRoundTrip() {
-        withFakeClaude {
+    @Test func controlRequestsRoundTrip() async {
+        await withFakeClaude {
             let r = ClaudeRunner()
             #expect((try? r.start(.init(cwd: NSTemporaryDirectory()))) != nil)
             var body: [String: Any]?
             r.request("initialize") { body = $0 }
-            #expect(waitUntil { body != nil })
+            #expect(await waitUntil { body != nil })
             let cat = Catalog(body ?? [:])
             #expect(cat.commands.first?.name == "fake-cmd"); #expect(cat.version == "0.0.0-fake")
             r.stop()
         }
     }
 
-    @Test func aPromptStreamsAReplyAndRecordsSessionAndCost() {
-        withFakeClaude {
+    @Test func aPromptStreamsAReplyAndRecordsSessionAndCost() async {
+        await withFakeClaude {
             let (_, c) = make()
             c.send("hi")
-            #expect(waitUntil { !c.isRunning && self.lastAssistantText(c) == "hello from fake" })
+            #expect(await waitUntil { !c.isRunning && self.lastAssistantText(c) == "hello from fake" })
             #expect(c.sessionID == "fake-session-1"); #expect(c.modelName == "fake-model"); #expect(c.cost == 0.02)
             c.teardown()
         }
     }
 
-    @Test func approvingAToolSendsAllowOverTheWire() {
-        withFakeClaude {
+    @Test func approvingAToolSendsAllowOverTheWire() async {
+        await withFakeClaude {
             let (_, c) = make(); c.permission = .manual
             c.send("please approve this")
-            #expect(waitUntil { !c.approvals.isEmpty })
-            #expect(c.approvals.first?.tool == "Write")
-            c.allow(c.approvals[0])
-            #expect(waitUntil { !c.isRunning && self.lastAssistantText(c) == "allowed" })
+            #expect(await waitUntil { !c.approvals.isEmpty })
+            guard let a = c.approvals.first else { c.teardown(); return }
+            #expect(a.tool == "Write")
+            c.allow(a)
+            #expect(await waitUntil { !c.isRunning && self.lastAssistantText(c) == "allowed" })
             c.teardown()
         }
     }
 
-    @Test func denyingAToolSendsDenyOverTheWire() {
-        withFakeClaude {
+    @Test func denyingAToolSendsDenyOverTheWire() async {
+        await withFakeClaude {
             let (_, c) = make(); c.permission = .manual
             c.send("please approve this")
-            #expect(waitUntil { !c.approvals.isEmpty })
-            c.deny(c.approvals[0], message: "no thanks")
-            #expect(waitUntil { !c.isRunning && self.lastAssistantText(c) == "denied" })
+            #expect(await waitUntil { !c.approvals.isEmpty })
+            guard let a = c.approvals.first else { c.teardown(); return }
+            c.deny(a, message: "no thanks")
+            #expect(await waitUntil { !c.isRunning && self.lastAssistantText(c) == "denied" })
             c.teardown()
         }
     }
 
-    @Test func stopInterruptsAHungTurnAndTheSessionStaysUsable() {
-        withFakeClaude {
+    @Test func stopInterruptsAHungTurnAndTheSessionStaysUsable() async {
+        await withFakeClaude {
             let (_, c) = make()
             c.send("hang")
-            #expect(waitUntil { c.isRunning && c.runner != nil })
-            Thread.sleep(forTimeInterval: 0.3)
+            #expect(await waitUntil { c.isRunning && c.runner != nil })
+            try? await Task.sleep(for: .milliseconds(300))
             c.stop()
-            #expect(waitUntil(5) { !c.isRunning })
+            #expect(await waitUntil(5) { !c.isRunning })
             #expect(c.messages.contains { $0.blocks.contains { $0.kind == .notice && $0.text == "Stopped" } })
             #expect(!c.messages.contains { $0.blocks.contains { $0.kind == .error } })
             c.send("hi again")
-            #expect(waitUntil { !c.isRunning && self.lastAssistantText(c) == "hello from fake" })
+            #expect(await waitUntil { !c.isRunning && self.lastAssistantText(c) == "hello from fake" })
             c.teardown()
         }
     }
@@ -86,5 +88,17 @@ import Foundation
         #expect(c.messages.last?.blocks.first?.kind == .error)
         #expect(c.messages.last?.blocks.first?.text.contains("claude") == true)
         #expect(!c.isRunning)
+    }
+
+    @Test func aChosenClaudePathIsUsedOnlyIfItIsExecutable() {
+        let saved = (ClaudeRunner.pathOverride, ClaudeRunner.discoveryEnabled)
+        defer { (ClaudeRunner.pathOverride, ClaudeRunner.discoveryEnabled) = saved }
+        ClaudeRunner.discoveryEnabled = false
+        ClaudeRunner.pathOverride = "/definitely/not/here"
+        #expect(ClaudeRunner.claudePath == nil)
+        ClaudeRunner.pathOverride = "/bin/ls"
+        #expect(ClaudeRunner.claudePath == "/bin/ls")
+        ClaudeRunner.pathOverride = "/etc/hosts"                          // exists but isn't executable
+        #expect(ClaudeRunner.claudePath == nil)
     }
 }

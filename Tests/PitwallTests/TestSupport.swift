@@ -43,14 +43,22 @@ func sessionMeta(id: String = UUID().uuidString, cwd: String, title: String = "t
     SessionMeta(id: id, path: path, cwd: cwd, title: title, date: Date(), branch: nil, entrypoint: entrypoint, searchText: title.lowercased())
 }
 
-/// Spins the main run loop (so the runner's main-queue callbacks are delivered) until `cond` holds.
-@MainActor func waitUntil(_ timeout: Double = 10, _ cond: () -> Bool) -> Bool {
+/// Polls until `cond` holds. It must *yield* (not block or spin the run loop): a test body already runs inside a
+/// main-queue job, so the runner's main-queue callbacks are only delivered while the test is suspended.
+@MainActor func waitUntil(_ timeout: Double = 10, _ cond: () -> Bool) async -> Bool {
     let end = Date().addingTimeInterval(timeout)
     while Date() < end {
         if cond() { return true }
-        RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.02))
+        try? await Task.sleep(for: .milliseconds(20))
     }
     return cond()
+}
+
+func withTempDirAsync<T>(_ body: (URL) async throws -> T) async rethrows -> T {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("pitwall-tests-\(UUID().uuidString)", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    return try await body(dir)
 }
 
 /// A stand-in for `claude -p --input-format stream-json …` that speaks the real wire protocol
@@ -91,14 +99,14 @@ done
 """#
 
 /// Points the app at the fake CLI for the duration of `body`.
-@MainActor func withFakeClaude<T>(_ body: () throws -> T) rethrows -> T {
-    try withTempDir { dir in
+@MainActor func withFakeClaude<T>(_ body: () async throws -> T) async rethrows -> T {
+    try await withTempDirAsync { dir in
         let path = dir.appendingPathComponent("claude")
         try? fakeClaudeScript.write(to: path, atomically: true, encoding: .utf8)
         try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path.path)
         let saved = ClaudeRunner.pathOverride
         ClaudeRunner.pathOverride = path.path
         defer { ClaudeRunner.pathOverride = saved }
-        return try body()
+        return try await body()
     }
 }

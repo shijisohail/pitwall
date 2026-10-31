@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import Pitwall
 
-@MainActor @Suite(.serialized) struct HardeningTests {
+@MainActor @Suite struct HardeningTests {
     @Test func onlyWebAndMailLinksMayOpen() {
         for ok in ["http://example.com", "https://example.com/a?b=c", "HTTPS://EXAMPLE.COM", "mailto:a@b.c"] {
             #expect(LinkPolicy.allows(URL(string: ok)!), "\(ok)")
@@ -44,18 +44,6 @@ import Foundation
         #expect(AppSettings(defaults: d).defaultPermission == .acceptEdits)
         d.set("plan", forKey: "defaultPermission")
         #expect(AppSettings(defaults: d).defaultPermission == .plan)
-    }
-
-    @Test func aChosenClaudePathIsUsedOnlyIfItIsExecutable() {
-        let saved = (ClaudeRunner.pathOverride, ClaudeRunner.discoveryEnabled)
-        defer { (ClaudeRunner.pathOverride, ClaudeRunner.discoveryEnabled) = saved }
-        ClaudeRunner.discoveryEnabled = false
-        ClaudeRunner.pathOverride = "/definitely/not/here"
-        #expect(ClaudeRunner.claudePath == nil)
-        ClaudeRunner.pathOverride = "/bin/ls"
-        #expect(ClaudeRunner.claudePath == "/bin/ls")
-        ClaudeRunner.pathOverride = "/etc/hosts"                          // exists but isn't executable
-        #expect(ClaudeRunner.claudePath == nil)
     }
 
     @Test func diagnosticsNeverLeakPathsTitlesOrContent() {

@@ -151,8 +151,8 @@ import Foundation
         #expect(d.stringArray(forKey: "tabs") == ["disk-id"])
     }
 
-    @Test func nothingIsLoadedWhileTheBoardIsShowing() throws {
-        try withTempDir { dir in
+    @Test func nothingIsLoadedWhileTheBoardIsShowing() async throws {
+        try await withTempDirAsync { dir in
             let s = makeStore(); s.workspace = ["/w"]
             let file = dir.appendingPathComponent("a.jsonl")
             try (userRecord("hello", cwd: "/w") + assistantRecord(id: "m", [["type": "text", "text": "hi"]])).write(to: file, atomically: true, encoding: .utf8)
@@ -162,7 +162,7 @@ import Foundation
             #expect(s.showBoard); #expect(c.loadState == .notLoaded)      // still on the board: transcript untouched
             s.open(c)
             #expect(c.loadState != .notLoaded)                    // shown now, so it loads
-            #expect(waitUntil { c.loadState == .loaded })
+            #expect(await waitUntil { c.loadState == .loaded })
             #expect(c.messages.count == 2)
             c.stopTail()
         }
