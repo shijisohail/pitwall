@@ -17,6 +17,7 @@ struct RootView: View {
                     else { BoardView() }
                 }
             }
+            .ignoresSafeArea(.container, edges: .top)      // tabs sit in the traffic-light row instead of under an empty strip
         }
         .background { AuroraBackground() }
         .dropDestination(for: URL.self) { urls, _ in store.openDropped(urls) }
