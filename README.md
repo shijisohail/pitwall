@@ -2,11 +2,14 @@
   <img src="docs/assets/banner.svg" alt="Pitwall: the pit wall for your Claude Code sessions" width="100%">
 </p>
 
+<h1 align="center">Pitwall: a native macOS app for Claude Code</h1>
+
 <p align="center">
   <a href="https://github.com/shijisohail/pitwall/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/shijisohail/pitwall?style=flat-square&color=9fef00&label=release"></a>
   <a href="https://github.com/shijisohail/pitwall/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/shijisohail/pitwall/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <img alt="macOS 26+" src="https://img.shields.io/badge/macOS-26%2B-111827?style=flat-square&logo=apple&logoColor=white">
   <img alt="Swift" src="https://img.shields.io/badge/Swift-SwiftUI-F05138?style=flat-square&logo=swift&logoColor=white">
+  <a href="https://github.com/shijisohail/pitwall/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/shijisohail/pitwall?style=flat-square&color=9fef00&logo=github"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-9fef00?style=flat-square"></a>
 </p>
 
@@ -21,6 +24,12 @@
 > The first release is here. **[⬇️ Download Pitwall-1.0.0.dmg](https://github.com/shijisohail/pitwall/releases/download/v1.0.0/Pitwall-1.0.0.dmg)** · [Release notes](https://github.com/shijisohail/pitwall/releases/tag/v1.0.0) · [Changelog](CHANGELOG.md)
 >
 > The first builds are *ad-hoc signed, not notarized*, so macOS asks you to approve them once. See [Install](#install) (it takes ten seconds).
+
+⭐ **If Pitwall is useful to you, [star the repo](https://github.com/shijisohail/pitwall).** It is the easiest way for other Claude Code users to find it.
+
+## What is Pitwall?
+
+Pitwall is a free, open-source **Claude Code GUI for Mac**: a native desktop app (SwiftUI) that lets you run and supervise **multiple Claude Code sessions in parallel**, such as several AI coding agents working on different projects. Instead of juggling terminal tabs, you get one board that shows which sessions are working, which are waiting on you, and which are done, with tool-permission prompts you can answer in one click and a live view of every file Claude changes.
 
 ## Why Pitwall?
 
@@ -213,7 +222,13 @@ UNSIGNED=1 Scripts/release.sh # builds dist/Pitwall-<version>.dmg
 
 **Why isn't it sandboxed or in the Mac App Store?** Launching your CLI and reading `~/.claude` are impossible inside the App Sandbox.
 
+## Star history
+
+[![Star history chart](https://api.star-history.com/svg?repos=shijisohail/pitwall&type=Date)](https://star-history.com/#shijisohail/pitwall&Date)
+
 ## Contributing
+
+Ways to help, from least to most effort: **⭐ star the repo**, tell a friend who uses Claude Code, [report a bug or suggest a feature](https://github.com/shijisohail/pitwall/issues/new/choose), improve the docs, or send a pull request.
 
 Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Need help? See [SUPPORT.md](SUPPORT.md).
 

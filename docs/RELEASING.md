@@ -61,6 +61,19 @@ shasum -a 256 -c Pitwall-X.Y.Z.dmg.sha256
 SIGN_IDENTITY="Developer ID Application: …" BUNDLE_ID=com.you.pitwall SKIP_NOTARIZE=1 Scripts/release.sh
 ```
 
+## Going public checklist
+
+Settings that cannot be changed from a pull request:
+
+- [ ] **Make the repository public** (Settings → General → Danger Zone). Until then release downloads need a GitHub login.
+- [ ] **Social preview:** Settings → General → *Social preview* → upload `docs/assets/social-preview.png` (1280×640). GitHub has no API for this. Regenerate it with `Scripts/make-social-preview.swift`.
+- [ ] **Topics and description** are already set (20 topics). Revisit them if the product changes.
+- [ ] **GitHub Pages:** Settings → Pages → *Deploy from a branch* → `main` / `/docs`. The landing page is `docs/index.html` and is served at `https://shijisohail.github.io/pitwall/`. Then set the repository *Website* to that URL, and link it from the README.
+- [ ] **Search Console:** add the Pages URL as a property and submit `https://shijisohail.github.io/pitwall/sitemap.xml`.
+- [ ] **Branch protection** on `main`: require the `build-and-test` check and a pull request.
+- [ ] **Private vulnerability reporting:** Settings → Code security, so [SECURITY.md](../SECURITY.md) and the Code of Conduct contact work.
+- [ ] Optional: enable **Discussions** for questions, and pin the v1.0.0 release.
+
 ## Release checklist
 
 - [ ] `swift test` and `Scripts/build.sh` pass; CI is green
