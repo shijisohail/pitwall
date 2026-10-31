@@ -25,6 +25,8 @@
 >
 > The first builds are *ad-hoc signed, not notarized*, so macOS asks you to approve them once. See [Install](#install) (it takes ten seconds).
 
+🌐 **Website: [shijisohail.github.io/pitwall](https://shijisohail.github.io/pitwall/)**
+
 ⭐ **If Pitwall is useful to you, [star the repo](https://github.com/shijisohail/pitwall).** It is the easiest way for other Claude Code users to find it.
 
 ## What is Pitwall?
