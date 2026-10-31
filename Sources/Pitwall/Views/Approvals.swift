@@ -40,11 +40,7 @@ struct ToolApprovalCard: View {
     let a: Approval
     @State private var feedback = ""
 
-    private var tool: Block {
-        var b = Block(kind: .tool); b.toolName = a.tool
-        if let d = try? JSONSerialization.data(withJSONObject: a.input) { b.inputJSON = String(decoding: d, as: UTF8.self) }
-        return b
-    }
+    private var tool: Block { ApprovalPreview.block(for: a) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -54,7 +50,7 @@ struct ToolApprovalCard: View {
                 Spacer()
                 if let r = a.reason { Text(r).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }
-            preview
+            ApprovalPreview(a: a)
                 .background(.black.opacity(0.26)).clipShape(RoundedRectangle(cornerRadius: 12))
 
             HStack(spacing: 8) {
@@ -72,6 +68,22 @@ struct ToolApprovalCard: View {
         }
         .approvalChrome(.orange)
     }
+}
+
+/// What a tool approval will actually do, shown in full (long output is capped with an explicit "N more" note).
+/// Shared by the chat card and the Pit Wall board so neither can offer Allow on a clipped view.
+struct ApprovalPreview: View {
+    let a: Approval
+
+    static func block(for a: Approval) -> Block {
+        var b = Block(kind: .tool); b.toolName = a.tool
+        if let d = try? JSONSerialization.data(withJSONObject: a.input) { b.inputJSON = String(decoding: d, as: UTF8.self) }
+        return b
+    }
+
+    private var tool: Block { Self.block(for: a) }
+
+    var body: some View { preview }
 
     @ViewBuilder private var preview: some View {
         let i = a.input

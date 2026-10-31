@@ -39,14 +39,22 @@ enum TerminalApp {
         }
     }
 
-    static func run(_ command: String, cwd: String) {
-        let dir = handoffDir
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    /// Writes the script owner-only (0700, set at creation so it is never briefly readable by others).
+    static func writeHandoff(_ command: String, cwd: String, in dir: URL? = nil) -> URL? {
+        let dir = dir ?? handoffDir
+        let fm = FileManager.default
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let f = dir.appendingPathComponent("\(UUID().uuidString).command")
         let script = "#!/bin/zsh -l\ncd \(quote(cwd)) && \(command)\n"
-        guard (try? script.write(to: f, atomically: true, encoding: .utf8)) != nil else { return }
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: f.path)
+        guard fm.createFile(atPath: f.path, contents: Data(script.utf8), attributes: [.posixPermissions: 0o700]) else { return nil }
+        return f
+    }
+
+    static func run(_ command: String, cwd: String) {
+        guard let f = writeHandoff(command, cwd: cwd) else { return }
         NSWorkspace.shared.open(f)
+        // Terminal reads the script as it opens; there's no reason to leave it behind.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { try? FileManager.default.removeItem(at: f) }
     }
 }
 

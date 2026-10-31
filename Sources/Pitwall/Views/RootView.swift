@@ -19,11 +19,7 @@ struct RootView: View {
             }
         }
         .background { AuroraBackground() }
-        .dropDestination(for: URL.self) { urls, _ in
-            let dirs = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-            dirs.forEach { store.openFolder($0.path) }
-            return !dirs.isEmpty
-        }
+        .dropDestination(for: URL.self) { urls, _ in store.openDropped(urls) }
         .sheet(item: $store.sheet) { SheetHost(kind: $0) }
         .environment(\.openURL, OpenURLAction { LinkPolicy.allows($0) ? .systemAction : .discarded })
         .task { await store.checkCLI() }
@@ -90,22 +86,6 @@ struct Rail: View {
                 .background(active ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 8))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).help(help).accessibilityLabel(help)
-    }
-}
-
-struct Welcome: View {
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                Image(systemName: "sparkles").font(.system(size: 40, weight: .light))
-                    .frame(width: 96, height: 96).panel(RoundedRectangle(cornerRadius: 20), tint: HTB.green.opacity(0.08), border: HTB.green.opacity(0.5))
-                Text("Open a project").font(.system(size: 28, weight: .semibold))
-                Text("Pitwall only shows and loads the folders you open. Pick one to begin; your other history stays untouched.")
-                    .foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 440)
-                ProjectPicker().frame(maxWidth: 560).padding(.top, 6)
-            }
-            .frame(maxWidth: .infinity).padding(.vertical, 50).padding(.horizontal, 30)
-        }
     }
 }
 

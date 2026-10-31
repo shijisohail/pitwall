@@ -54,6 +54,7 @@ struct ChatView: View {
             }
         }
         .frame(minWidth: 480)
+        .attachmentDrop(for: conversation)
     }
 
     // MARK: Header

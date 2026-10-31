@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 enum Role: String, Codable { case user, assistant }
 
@@ -128,6 +129,12 @@ struct Usage {
     var sevenDay: Double
     var fiveReset: Date?
     var sevenReset: Date?
+}
+
+struct QueuedMessage: Identifiable {
+    let id = UUID()
+    var text: String
+    var images: [NSImage] = []
 }
 
 // MARK: Pending approvals (control_request can_use_tool)

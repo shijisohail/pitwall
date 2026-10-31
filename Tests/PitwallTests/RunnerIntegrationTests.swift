@@ -101,4 +101,73 @@ import Foundation
         ClaudeRunner.pathOverride = "/etc/hosts"                          // exists but isn't executable
         #expect(ClaudeRunner.claudePath == nil)
     }
+
+    // MARK: Message queue
+
+    private func result(sub: String = "success", isError: Bool = false) -> [String: Any] {
+        ["type": "result", "subtype": sub, "is_error": isError, "result": "", "session_id": "s1"]
+    }
+
+    @Test func aQueuedMessageIsSentWhenTheTurnFinishes() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            c.isRunning = true
+            #expect(c.enqueue("  second  "))
+            #expect(c.queue.count == 1 && c.queue[0].text == "second")
+            c.handle(result())
+            #expect(c.queue.isEmpty)
+            #expect(c.messages.first?.role == .user && c.messages.first?.blocks.first?.text == "second")
+            #expect(await waitUntil { !c.isRunning && self.lastAssistantText(c) == "hello from fake" })
+            c.teardown()
+        }
+    }
+
+    @Test func queuedMessagesGoOutOneAtATime() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            c.isRunning = true
+            c.enqueue("one"); c.enqueue("two")
+            c.handle(result())
+            #expect(c.queue.map(\.text) == ["two"])                          // "one" is running; "two" waits its turn
+            #expect(await waitUntil { c.queue.isEmpty && !c.isRunning })      // finishing "one" releases "two"
+            let sent = c.messages.filter { $0.role == .user }.compactMap { $0.blocks.first?.text }
+            #expect(sent == ["one", "two"])
+            c.teardown()
+        }
+    }
+
+    @Test func anErrorOrStopLeavesTheQueueAlone() {
+        let (_, c) = make()
+        c.isRunning = true; c.enqueue("later")
+        c.handle(result(sub: "error_during_execution", isError: true))
+        #expect(c.queue.count == 1)
+        #expect(!c.messages.contains { $0.role == .user })
+    }
+
+    @Test func stoppingHandsTheQueueBackToTheComposer() {
+        let (_, c) = make()
+        c.isRunning = true
+        c.enqueue("a"); c.enqueue("b")
+        c.stop()
+        #expect(c.queue.isEmpty)
+        #expect(c.draftAppend == ["a", "b"])
+        c.isRunning = false
+    }
+
+    @Test func editingAQueuedMessagePullsItBack() {
+        let (_, c) = make()
+        c.isRunning = true
+        c.enqueue("fix typo"); c.enqueue("second")
+        c.editQueued(c.queue[0].id)
+        #expect(c.queue.map(\.text) == ["second"]); #expect(c.draftAppend == ["fix typo"])
+        c.unqueue(c.queue[0].id)
+        #expect(c.queue.isEmpty)
+        c.isRunning = false
+    }
+
+    @Test func emptyMessagesAreNotQueued() {
+        let (_, c) = make()
+        #expect(!c.enqueue("   \n "))
+        #expect(c.queue.isEmpty)
+    }
 }
