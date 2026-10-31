@@ -19,7 +19,7 @@ if [[ "${UNSIGNED:-0}" == "1" ]]; then
   export BUNDLE_ID="${BUNDLE_ID:-io.github.shijisohail.pitwall}"
   VERSION="${VERSION:-$(tr -d '[:space:]' < VERSION)}"; export VERSION
   echo "==> UNSIGNED build: ad-hoc signed, not notarized"
-  Scripts/build.sh
+  SIGN_IDENTITY=- Scripts/build.sh      # explicit: a release is never signed with the local development identity
   Scripts/make-dmg.sh
   ( cd dist && shasum -a 256 "Pitwall-$VERSION.dmg" > "Pitwall-$VERSION.dmg.sha256" )
   ls -la dist

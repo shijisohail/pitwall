@@ -92,6 +92,7 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
                 hero
+                PermissionsTip()
                 tiles
                 projects
                 if !recent.isEmpty { sessions }
@@ -283,6 +284,7 @@ struct Welcome: View {
                     .foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 460).offset(y: -8)
 
                 dropZone
+                PermissionsTip()
 
                 let recents = store.recentProjects()
                 if !recents.isEmpty {
@@ -339,5 +341,38 @@ struct Welcome: View {
         }
         .buttonStyle(.plain).glassCard(12).hoverLift()
         .help(r.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+    }
+}
+
+// MARK: One-time tip about macOS folder permissions
+
+/// Shown once, until dismissed or Full Disk Access is on. macOS prompts per folder as Claude Code first touches each one;
+/// this explains why and offers a single deliberate alternative.
+struct PermissionsTip: View {
+    @Bindable private var settings = AppSettings.shared
+    @State private var recheck = 0
+
+    var body: some View {
+        let _ = recheck      // bumped when the app is reactivated, so granting access in System Settings hides the tip
+        // The Full Disk Access probe is a cheap open/close, and is skipped entirely once the tip is dismissed.
+        if !settings.permissionsTipDismissed && !Permissions.hasFullDiskAccess {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "lock.shield").font(.system(size: 18)).foregroundStyle(HTB.cyan).frame(width: 26)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("macOS may ask for folder access").font(.system(size: 13.5, weight: .semibold))
+                    Text("It asks once for each place Claude Code first works in, such as Documents or Downloads. Allow the ones you use, or grant Full Disk Access once to skip the pop-ups. Both are optional.")
+                        .font(.system(size: 12.5)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Button("Open Full Disk Access") { Permissions.openFullDiskAccess() }.buttonStyle(HTBSecondary()).controlSize(.small)
+                        Button("Not now") { settings.permissionsTipDismissed = true }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(.secondary)
+                    }.padding(.top, 2)
+                }
+                Spacer(minLength: 0)
+                Button { settings.permissionsTipDismissed = true } label: { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }
+                    .buttonStyle(.plain).foregroundStyle(.tertiary).help("Don't show this again").accessibilityLabel("Dismiss")
+            }
+            .padding(14).frame(maxWidth: 820, alignment: .leading).glassCard(12)
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in recheck += 1 }
+        }
     }
 }

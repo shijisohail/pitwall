@@ -81,3 +81,9 @@ Settings that cannot be changed from a pull request:
 - [ ] README screenshots and `PRIVACY.md` still accurate
 - [ ] `docs/CLAUDE_CODE_PROTOCOL.md` verified against the current Claude Code version
 - [ ] Notarization and Gatekeeper checks above pass on a clean machine
+
+## Why signing matters for permissions
+
+macOS stores privacy answers (Documents, Downloads, network volumes, Full Disk Access) against the app's code identity. A **Developer ID** build has a stable identity, so users are asked once and the answers survive updates. An **ad-hoc** (`UNSIGNED=1`) build is identified by the hash of its binary, which changes every release, so users are asked again after each update. That is the main practical reason to sign releases once there is an Apple Developer account.
+
+For local development, `Scripts/setup-local-signing.sh` creates a self-signed identity that `Scripts/build.sh` picks up automatically, so rebuilds on your own Mac stop re-asking.

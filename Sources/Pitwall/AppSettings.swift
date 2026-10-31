@@ -15,6 +15,8 @@ final class AppSettings {
     }
     var animatedBackground: Bool { didSet { defaults.set(animatedBackground, forKey: "animatedBackground") } }
     var confirmQuitWhileRunning: Bool { didSet { defaults.set(confirmQuitWhileRunning, forKey: "confirmQuit") } }
+    /// Set once the user has seen (and dismissed) the one-time tip about macOS folder permissions.
+    var permissionsTipDismissed: Bool { didSet { defaults.set(permissionsTipDismissed, forKey: "permissionsTipDismissed") } }
     /// Track subagents and show them in the inspector's Agents tab. Off also stops the tracking.
     var showAgents: Bool { didSet { defaults.set(showAgents, forKey: "showAgents") } }
 
@@ -25,6 +27,7 @@ final class AppSettings {
         claudePath = defaults.string(forKey: "claudePath") ?? ""
         animatedBackground = defaults.object(forKey: "animatedBackground") as? Bool ?? false     // costs ~4% CPU while idle, so opt-in
         confirmQuitWhileRunning = defaults.object(forKey: "confirmQuit") as? Bool ?? true
+        permissionsTipDismissed = defaults.object(forKey: "permissionsTipDismissed") as? Bool ?? false
         showAgents = defaults.object(forKey: "showAgents") as? Bool ?? true
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
