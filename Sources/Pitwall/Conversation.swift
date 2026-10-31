@@ -38,6 +38,10 @@ final class Conversation: Identifiable {
     var queue: [QueuedMessage] = []
     /// Set by "send now": the interrupt that follows must not hand the queue back to the composer.
     @ObservationIgnored var drainAfterStop = false
+    /// Subagents Claude has spawned in this session (see Agents.swift).
+    var agents: [AgentRun] = []
+    @ObservationIgnored var agentSlots: [String: Int] = [:]
+    @ObservationIgnored var agentFinishCount = 0
 
     @ObservationIgnored var runner: ClaudeRunner?
     @ObservationIgnored var blockMap: [Int: Int] = [:]
@@ -86,6 +90,7 @@ final class Conversation: Identifiable {
             guard let self else { return }
             self.parser = r.parser; self.tailOffset = r.offset
             self.messages = r.parser.messages
+            self.seedAgentsFromHistory()
             if self.contextTokens == 0 { self.contextTokens = r.parser.contextTokens }
             self.loadState = .loaded
             self.startTail()
@@ -116,6 +121,7 @@ final class Conversation: Identifiable {
         guard !data.isEmpty else { return }
         parser.consume(data); tailOffset = end
         messages = parser.messages
+        seedAgentsFromHistory()
         if let t = parser.customTitle { title = t }
         contextTokens = parser.contextTokens > 0 ? parser.contextTokens : contextTokens
         updatedAt = Date()
@@ -348,6 +354,7 @@ final class Conversation: Identifiable {
     // MARK: Event handling (stream-json)
 
     func handle(_ e: [String: Any]) {
+        trackAgents(e)
         let parent = e["parent_tool_use_id"]
         let isSub = parent != nil && !(parent is NSNull)
         switch e["type"] as? String {

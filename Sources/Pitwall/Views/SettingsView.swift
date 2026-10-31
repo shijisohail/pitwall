@@ -40,6 +40,11 @@ struct SettingsView: View {
                 Text(settings.defaultPermission.blurb).font(.caption).foregroundStyle(.secondary)
                 Toggle("Confirm before quitting while sessions are working", isOn: $settings.confirmQuitWhileRunning)
             }
+            Section("Agents") {
+                Toggle("Show agent activity", isOn: $settings.showAgents)
+                Text("Adds an Agents tab to the inspector showing every subagent Claude spawns, what each one is doing, and how many there are. Turning it off also stops tracking them.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Appearance") {
                 Toggle("Animate the background", isOn: $settings.animatedBackground)
                 Text("Slowly drifting glows. Uses a few percent of a CPU core while the window is open, and is always off when macOS Reduce Motion is on.")

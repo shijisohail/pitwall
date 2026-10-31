@@ -10,6 +10,12 @@ All notable changes to this project are documented here. The format follows
 - Fewer surprises from macOS folder-permission pop-ups: Settings gains a Permissions section (Full Disk Access status and shortcuts to the right System Settings panes), and a one-time dismissible tip on the home and welcome screens explains why macOS asks and offers a single optional alternative.
 - `Scripts/setup-local-signing.sh` creates a stable local signing identity, and `Scripts/build.sh` uses it automatically, so rebuilding on your own Mac no longer makes macOS forget your folder permissions. Docs explain why signed releases keep permissions across updates and ad-hoc ones don't.
 
+### Added
+- Agents tab in the inspector: every subagent Claude spawns appears as a little bot on a canvas. It moves to Think, Read, Search & web, Edit or Run as it works, shows what it is doing in a speech bubble, springs out of the agent that spawned it, and rests along the bottom when done. A roster below lists each agent with its state, time, tools and tokens, and expands to its task, steps and report. Reopened sessions show finished agents too. Turn it off in Settings, Agents.
+
+### Fixed
+- Markdown tables render as real tables (header row, column alignment, wrapping cells, zebra rows, bold and code inside cells) instead of raw `| pipes |` in a code block. Wide tables shrink to fit the chat instead of overflowing.
+
 ## [1.1.1] - 2026-10-31
 
 ### Fixed

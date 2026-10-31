@@ -59,3 +59,21 @@ Terminal-UI-only commands (`/resume`, `/permissions`, `/memory`, `/status`, `/ad
 ## On-disk history
 
 `~/.claude/projects/<cwd with "/" and "." replaced by "-">/<sessionId>.jsonl`, one record per content block (merge blocks sharing `message.id`). Title records: `custom-title` (set by `/rename`) beats `ai-title`. The first user record carries `cwd`, `gitBranch` and `entrypoint` (`cli`, `sdk-cli`, `claude-desktop`). `~/.claude/history.jsonl` lists every typed prompt with project and session.
+
+## Subagents (observed with Claude Code, `-p` stream-json, `--include-partial-messages`)
+
+Spawning an agent is an `Agent` (older: `Task`) tool call with input `description`, `prompt`, `subagent_type`, `run_in_background`. In `-p` mode the calls came back as **async** ("Async agent launched successfully…") even without `run_in_background`, so the tool result is not the agent's report.
+
+Lifecycle events (all `type: "system"`, `task_id` is the agent's id, `tool_use_id` is the spawning `Agent` tool_use id):
+
+| subtype | fields |
+|---|---|
+| `task_started` | `description`, `subagent_type`, `is_backgrounded`, `spawn_depth` (1 = spawned by the main thread), `task_type` (`local_agent`), `prompt` |
+| `task_progress` | `description` (what it is doing now, e.g. "Running Count entries…"), `usage` `{total_tokens, tool_uses, duration_ms}`, `last_tool_name` |
+| `task_updated` | `patch` `{status, end_time(ms)}` |
+| `task_notification` | `status` (`completed`, …), `summary` (the agent's final text), `usage`, `output_file` |
+| `background_tasks_changed` | `tasks`: the currently running background tasks |
+
+An agent's own steps arrive as ordinary `assistant` (thinking / text / tool_use) and `user` (tool_result) events carrying `parent_tool_use_id` (the spawning tool_use id) plus `agent_id`, `subagent_type`, `task_description`. **No `stream_event` deltas are sent for subagents**, only complete events. A nested agent is an `Agent` tool_use inside events whose `parent_tool_use_id` is the outer agent. After background agents finish, the CLI starts further turns on its own, so one prompt can produce several `result` events.
+
+Fixture: `Tests/PitwallTests/AgentsFixture.swift`.
