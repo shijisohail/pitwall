@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Markdown tables render as real tables (header row, column alignment, wrapping cells, zebra rows, bold and code inside cells) instead of raw `| pipes |` in a code block. Wide tables shrink to fit the chat instead of overflowing.
+
 ## [1.1.1] - 2026-10-31
 
 ### Fixed
