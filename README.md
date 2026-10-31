@@ -137,7 +137,7 @@ Plus: a 5-hour and 7-day **usage meter**, ⌘K **search across every session and
 
 macOS asks separately for Documents, Desktop, Downloads, network volumes and more, the first time Claude Code (or a command it runs) touches each place. Allow the ones you use; that is all it takes. To skip the pop-ups, grant **Full Disk Access** once (Settings → Permissions in Pitwall has a button for it). It is optional.
 
-Builds that aren't signed with a stable certificate, such as the unsigned releases and anything you build yourself, are re-identified by macOS on every update or rebuild, so it asks again. To avoid that when building from source, run `Scripts/setup-local-signing.sh` once; `Scripts/build.sh` then keeps the same identity across rebuilds. Developer ID releases (see [RELEASING](docs/RELEASING.md)) keep your answers across updates.
+Builds that aren't signed with a stable certificate, such as the unsigned releases and anything you build yourself, are re-identified by macOS on every update or rebuild, so it asks again. To avoid that when building from source, run `Scripts/setup-local-signing.sh` once; `Scripts/build.sh` then keeps the same identity across rebuilds. The script adds a self-signed certificate and its key to your login keychain and trusts it for code signing for your user, so use it on your own development Mac only; delete "Pitwall Local Signing" in Keychain Access to undo it. Developer ID releases (see [RELEASING](docs/RELEASING.md)) keep your answers across updates.
 
 ## Quick start
 

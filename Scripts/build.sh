@@ -24,7 +24,7 @@ ARCHS="${ARCHS:-arm64 x86_64}"
 # permissions across rebuilds), else ad-hoc.
 LOCAL_ID="Pitwall Local Signing"
 if [[ -z "${SIGN_IDENTITY:-}" ]]; then
-  if security find-identity -v -p codesigning 2>/dev/null | grep -q "$LOCAL_ID"; then SIGN_IDENTITY="$LOCAL_ID"; else SIGN_IDENTITY="-"; fi
+  if security find-identity -v -p codesigning 2>/dev/null | grep -qF "\"$LOCAL_ID\""; then SIGN_IDENTITY="$LOCAL_ID"; else SIGN_IDENTITY="-"; fi
 fi
 
 # SDK: use Xcode's when it works. A bare Command Line Tools install may default to an SDK newer than its
@@ -61,7 +61,16 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 echo "==> signing (${SIGN_IDENTITY/#-/ad-hoc})"
 if [[ "$SIGN_IDENTITY" == "-" || "$SIGN_IDENTITY" == "$LOCAL_ID" ]]; then ts="--timestamp=none"; else ts="--timestamp"; fi
-codesign --force --options runtime $ts --entitlements Resources/Pitwall.entitlements --sign "$SIGN_IDENTITY" "$APP"
+if ! codesign --force --options runtime $ts --entitlements Resources/Pitwall.entitlements --sign "$SIGN_IDENTITY" "$APP"; then
+  if [[ "$SIGN_IDENTITY" == "$LOCAL_ID" ]]; then
+    # e.g. a locked keychain or an SSH/CI session that can't show the key-access prompt: don't fail the build over it.
+    echo "warning: couldn't sign with \"$LOCAL_ID\"; falling back to an ad-hoc signature (macOS will re-ask for folder access)" >&2
+    SIGN_IDENTITY="-"
+    codesign --force --options runtime --timestamp=none --entitlements Resources/Pitwall.entitlements --sign - "$APP"
+  else
+    exit 1
+  fi
+fi
 codesign --verify --strict --verbose=1 "$APP"
 
 echo "==> built $APP"

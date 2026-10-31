@@ -7,7 +7,9 @@ import AppKit
 enum Permissions {
     /// Full Disk Access has no prompt, so the only way to know is to try to read a file macOS protects with it.
     static var hasFullDiskAccess: Bool {
-        FileHandle(forReadingAtPath: NSHomeDirectory() + "/Library/Application Support/com.apple.TCC/TCC.db") != nil
+        let fd = Darwin.open(NSHomeDirectory() + "/Library/Application Support/com.apple.TCC/TCC.db", O_RDONLY)
+        if fd >= 0 { Darwin.close(fd) }
+        return fd >= 0
     }
 
     private static func open(_ pane: String) {

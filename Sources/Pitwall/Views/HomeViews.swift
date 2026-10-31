@@ -350,10 +350,12 @@ struct Welcome: View {
 /// this explains why and offers a single deliberate alternative.
 struct PermissionsTip: View {
     @Bindable private var settings = AppSettings.shared
-    @State private var granted = Permissions.hasFullDiskAccess
+    @State private var recheck = 0
 
     var body: some View {
-        if !settings.permissionsTipDismissed && !granted {
+        let _ = recheck      // bumped when the app is reactivated, so granting access in System Settings hides the tip
+        // The Full Disk Access probe is a cheap open/close, and is skipped entirely once the tip is dismissed.
+        if !settings.permissionsTipDismissed && !Permissions.hasFullDiskAccess {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "lock.shield").font(.system(size: 18)).foregroundStyle(HTB.cyan).frame(width: 26)
                 VStack(alignment: .leading, spacing: 6) {
@@ -370,7 +372,7 @@ struct PermissionsTip: View {
                     .buttonStyle(.plain).foregroundStyle(.tertiary).help("Don't show this again").accessibilityLabel("Dismiss")
             }
             .padding(14).frame(maxWidth: 820, alignment: .leading).glassCard(12)
-            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in granted = Permissions.hasFullDiskAccess }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in recheck += 1 }
         }
     }
 }
