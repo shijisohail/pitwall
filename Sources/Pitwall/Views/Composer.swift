@@ -55,11 +55,13 @@ struct Composer: View {
             if !images.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(images.indices, id: \.self) { i in
-                            Image(nsImage: images[i]).resizable().scaledToFill().frame(width: 56, height: 56)
+                        // Iterate a snapshot of (offset, image): a cell must never index the live array, which can shrink
+                        // (send, queue, remove) between SwiftUI deciding to re-run it and running it.
+                        ForEach(Array(images.enumerated()), id: \.offset) { i, img in
+                            Image(nsImage: img).resizable().scaledToFill().frame(width: 56, height: 56)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .overlay(alignment: .topTrailing) {
-                                    Button { conversation.draftImages.remove(at: i) } label: {
+                                    Button { if conversation.draftImages.indices.contains(i) { conversation.draftImages.remove(at: i) } } label: {
                                         Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(.white, .black.opacity(0.6))
                                     }.buttonStyle(.plain).offset(x: 5, y: -5)
                                 }
