@@ -14,7 +14,7 @@ Nothing. There is no telemetry, analytics, crash reporting, account system or up
 | `~/.claude/history.jsonl` | Prompt recall (↑) and search | read only |
 | `~/.claude/settings*.json`, `CLAUDE.md`, memory files | The Settings, Memory and Permissions viewers | read only (opened in your editor on request) |
 | Folders you open | The `claude` process works there; the `git diff`, file list and revert features run `git` there | as directed by you and Claude Code |
-| App preferences (`UserDefaults`) | Your opened folders, tabs, and toggles. Never prompts or transcript content | read/write |
+| App preferences (`UserDefaults`) | Your opened folders, tabs, Settings choices (including a custom `claude` path). Never prompts or transcript content | read/write |
 | A temporary `.command` file | Hand-off to Terminal | write, in the system temp directory |
 
 ## The `claude` process

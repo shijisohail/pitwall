@@ -27,8 +27,20 @@ enum TerminalApp {
     static var claude: String { quote(ClaudeRunner.claudePath ?? "claude") }
 
     /// Opens Terminal running `command` in `cwd` (via a .command file, so no Automation permission is needed).
+    static var handoffDir: URL { FileManager.default.temporaryDirectory.appendingPathComponent("pitwall-handoff", isDirectory: true) }
+
+    /// The scripts are only needed for a moment; remove stale ones so they don't pile up in the temp directory.
+    static func cleanupHandoffFiles(olderThan age: TimeInterval = 86_400, in dir: URL? = nil) {
+        let d = dir ?? handoffDir
+        guard let files = try? FileManager.default.contentsOfDirectory(at: d, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+        for f in files where f.pathExtension == "command" {
+            let m = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            if Date().timeIntervalSince(m) > age { try? FileManager.default.removeItem(at: f) }
+        }
+    }
+
     static func run(_ command: String, cwd: String) {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("pitwall-handoff", isDirectory: true)
+        let dir = handoffDir
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let f = dir.appendingPathComponent("\(UUID().uuidString).command")
         let script = "#!/bin/zsh -l\ncd \(quote(cwd)) && \(command)\n"

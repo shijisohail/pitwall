@@ -19,5 +19,13 @@ First public version.
 - Native cards for tool permissions, Claude's questions and plan approval.
 - Inspector with live Changes diff (and revert), Plan, Context and Files tabs.
 - Live model, effort and permission-mode switching; image attachments; `@` file mentions; `!` shell commands.
-- Dark, terminal-inspired theme.
+- Dark, terminal-inspired theme (background animation is opt-in; idle CPU is 0%).
+- Settings window (⌘,): `claude` location, default permission mode, animation, history options.
+- First-run health check with a banner when the `claude` CLI is missing.
+- Quit confirmation while sessions are working; folders dropped on the Dock icon open as projects.
+- Help → Copy Diagnostics (versions and counts only).
+- Security: only http, https and mailto links in model output can open; tool output stored in memory is capped; stale hand-off scripts are cleaned up; session ids are shell-quoted.
+- Transcripts, live tailing and command catalogs load only for the session being shown, never while the board is showing.
+- Accessibility: Reduce Motion respected, VoiceOver labels for sessions, tabs and status.
+- Unsigned release path (`UNSIGNED=1`) for building a DMG without an Apple Developer account.
 - Universal (arm64 + x86_64) hardened-runtime build, DMG packaging, notarization script, CI and release workflows.

@@ -14,19 +14,31 @@ enum HTB {
 
 /// The window background: flat near-black with two faint glows and a dot grid.
 struct AuroraBackground: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 15)) { ctx in
-            let t = ctx.date.timeIntervalSinceReferenceDate
-            ZStack {
-                HTB.bg
-                RadialGradient(colors: [HTB.green.opacity(0.09), .clear],
-                               center: UnitPoint(x: 0.86 + 0.04 * sin(t * 0.15), y: 0), startRadius: 0, endRadius: 560)
-                RadialGradient(colors: [HTB.cyan.opacity(0.06), .clear],
-                               center: UnitPoint(x: 0.04, y: 1 + 0.04 * cos(t * 0.12)), startRadius: 0, endRadius: 520)
-                DotGrid()
+        ZStack {
+            HTB.bg
+            // Only the two soft glows move, and slowly, so a few frames a second is plenty.
+            // The dot grid sits outside the timeline so it is drawn once, not every frame.
+            if reduceMotion || !AppSettings.shared.animatedBackground {
+                glows(0)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 5)) { glows($0.date.timeIntervalSinceReferenceDate) }
             }
+            DotGrid().drawingGroup()
         }
         .ignoresSafeArea()
+        .accessibilityHidden(true)
+    }
+
+    private func glows(_ t: Double) -> some View {
+        ZStack {
+            RadialGradient(colors: [HTB.green.opacity(0.09), .clear],
+                           center: UnitPoint(x: 0.86 + 0.04 * sin(t * 0.15), y: 0), startRadius: 0, endRadius: 560)
+            RadialGradient(colors: [HTB.cyan.opacity(0.06), .clear],
+                           center: UnitPoint(x: 0.04, y: 1 + 0.04 * cos(t * 0.12)), startRadius: 0, endRadius: 520)
+        }
     }
 }
 

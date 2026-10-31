@@ -17,6 +17,7 @@ A native macOS front end for [Claude Code](https://docs.claude.com/en/docs/claud
 - **Inspector**: live *Changes* diff (with revert), *Plan*/to-dos, *Context* usage, *Files* touched.
 - **Everything switchable live**: model, effort and permission mode.
 - **Hand-off to Terminal** with one shortcut, and fork any session.
+- **Settings (⌘,)**: choose the `claude` location, the default permission mode, and more. Quit asks first if sessions are still working, and folders dropped on the Dock icon open as projects.
 
 ## Requirements
 
@@ -26,6 +27,10 @@ A native macOS front end for [Claude Code](https://docs.claude.com/en/docs/claud
 ## Install
 
 Download the notarized `.dmg` from [Releases](../../releases), drag **Pitwall** to Applications, and open it. Verify the download against the `.sha256` published with each release.
+
+#### Unsigned builds
+
+Releases made without an Apple Developer ID are marked **pre-release** and are *ad-hoc signed, not notarized*. macOS will refuse to open them at first ("Apple could not verify…"). To approve one: open **System Settings → Privacy & Security**, scroll to the Pitwall message and click **Open Anyway**, or run `xattr -dr com.apple.quarantine /Applications/Pitwall.app`. Only do this for a build you trust; compare its SHA-256 with the `.sha256` file on the release. A build you compile yourself on your own Mac never shows this warning.
 
 ### Build from source
 
@@ -49,6 +54,7 @@ swift test                    # unit tests (needs a working Xcode toolchain)
 | ⌘1 / ⌘2 | Pit Wall / Sessions |
 | ⌘K | Search every session and prompt |
 | ⌘O | Open one or more project folders |
+| ⌘, | Settings |
 | ⇧⌘T | Continue this session in Terminal |
 | ⌘. , Esc | Stop the current response |
 | ↑ in an empty prompt | Recall earlier prompts for this project |
@@ -58,6 +64,14 @@ swift test                    # unit tests (needs a working Xcode toolchain)
 Pitwall has **no telemetry, no analytics, no accounts and makes no network connections of its own**. It reads and writes only local files (`~/.claude`, the folders you open) and talks to the `claude` process it launches; that CLI talks to Anthropic under its own terms. Transcripts can contain secrets, so Pitwall keeps them on your Mac and never uploads them. Details: [PRIVACY.md](PRIVACY.md). To report a vulnerability: [SECURITY.md](SECURITY.md).
 
 Pitwall is intentionally **not sandboxed** (a sandbox would prevent launching your CLI and reading `~/.claude`). It is signed with the Hardened Runtime and notarized. **Full access** mode disables all of Claude Code's permission checks and asks for confirmation before enabling.
+
+## Troubleshooting
+
+- **"Claude Code wasn't found" banner.** Install Claude Code, or choose its location in Settings (⌘,). Pitwall looks in `~/.local/bin`, Homebrew and your login shell's `PATH`.
+- **"Not logged in" in a session.** Click *Log in in Terminal* on the message, or run `claude auth login`.
+- **macOS asks about Desktop / Documents / Downloads access.** That is Claude Code, started by Pitwall, reaching a folder you opened. Allow it for the folders you want to work in.
+- **A session shows "Live in a terminal".** It is also running in a terminal, so Pitwall follows it read-only; use *Fork & Continue Here* to work on a copy.
+- **Reporting a bug.** Use **Help → Copy Diagnostics** and paste it into the issue. It contains versions and counts only, never paths or content.
 
 ## Known limitations
 

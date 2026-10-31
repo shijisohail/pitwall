@@ -4,7 +4,17 @@ Releases are built, signed with a **Developer ID Application** certificate, nota
 
 > Pitwall is distributed **outside the Mac App Store** (it cannot be sandboxed; see [ARCHITECTURE.md](ARCHITECTURE.md)).
 
-## One-time setup
+## No Apple Developer account? Ship an unsigned DMG
+
+You can publish without signing or notarizing:
+
+```sh
+UNSIGNED=1 Scripts/release.sh        # dist/Pitwall-<version>.dmg and .sha256 (ad-hoc signed)
+```
+
+The release workflow does the same automatically when the `DEVELOPER_ID_CERT_P12_BASE64` secret is not set, and marks the GitHub release as a **pre-release**. The DMG runs normally on the Mac that built it. On other Macs Gatekeeper blocks it until the user approves it under *System Settings → Privacy & Security → Open Anyway* (instructions are in the README). Add signing later without changing anything else: set the secrets below and the same workflow switches to Developer ID + notarization.
+
+## One-time setup (signed releases)
 
 1. **Apple Developer Program** membership.
 2. **Developer ID Application certificate.** Create it in your developer account, install it in Keychain Access, then export it as a `.p12` with a password.

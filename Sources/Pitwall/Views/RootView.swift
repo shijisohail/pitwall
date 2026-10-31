@@ -8,6 +8,7 @@ struct RootView: View {
         HStack(spacing: 0) {
             Rail()
             VStack(spacing: 0) {
+                if store.cliStatus == .missing { CLIMissingBanner() }
                 if !store.workspace.isEmpty { TabBar() }
                 Group {
                     if store.workspace.isEmpty { Welcome() }
@@ -24,9 +25,8 @@ struct RootView: View {
             return !dirs.isEmpty
         }
         .sheet(item: $store.sheet) { SheetHost(kind: $0) }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
-            store.conversations.forEach { $0.runner?.stop() }     // don't leave claude children running after quit
-        }
+        .environment(\.openURL, OpenURLAction { LinkPolicy.allows($0) ? .systemAction : .discarded })
+        .task { await store.checkCLI() }
         .task {
             await store.scan()
             // Pick up sessions started or changed in a terminal.
@@ -106,5 +106,36 @@ struct Welcome: View {
             }
             .frame(maxWidth: .infinity).padding(.vertical, 50).padding(.horizontal, 30)
         }
+    }
+}
+
+/// Shown until the `claude` CLI is found: Pitwall can't do anything without it.
+struct CLIMissingBanner: View {
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(HTB.amber)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Claude Code wasn't found").fontWeight(.semibold)
+                Text("Pitwall drives the `claude` command-line tool. Install it, or point Pitwall at it.").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Install Instructions") { NSWorkspace.shared.open(URL(string: "https://docs.claude.com/en/docs/claude-code/setup")!) }.buttonStyle(HTBSecondary())
+            Button("Choose…") { choose() }.buttonStyle(HTBSecondary())
+            Button("Retry") { Task { await store.checkCLI() } }.buttonStyle(HTBPrimary())
+        }
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .background(HTB.amber.opacity(0.10))
+        .overlay(alignment: .bottom) { Rectangle().fill(HTB.amber.opacity(0.5)).frame(height: 1) }
+    }
+
+    private func choose() {
+        let p = NSOpenPanel()
+        p.message = "Choose the claude executable"; p.prompt = "Use This"
+        p.directoryURL = URL(fileURLWithPath: NSHomeDirectory() + "/.local/bin")
+        guard p.runModal() == .OK, let url = p.url else { return }
+        AppSettings.shared.claudePath = url.path
+        Task { await store.checkCLI() }
     }
 }

@@ -8,6 +8,10 @@ struct Project: Identifiable, Hashable {
     var shortPath: String { path.replacingOccurrences(of: NSHomeDirectory(), with: "~") }
 }
 
+enum CLIStatus: Equatable {
+    case unknown, ok(version: String), missing
+}
+
 struct RecentProject: Identifiable {
     var path: String
     var count: Int
@@ -33,18 +37,21 @@ final class Store {
     var selection: String? {
         didSet {
             conversations.first { $0.id == oldValue }?.stopTail()
-            guard let c = current else { return }
-            c.loadHistoryIfNeeded(); c.startTail(); ensureCatalog(c.cwd)
+            if !showBoard { activateCurrent() }
         }
     }
     var query = ""
-    var showBoard = true
+    /// While the board is showing, no transcript is loaded, tailed, or catalogued: only what is on screen costs anything.
+    var showBoard = true {
+        didSet { if !showBoard { activateCurrent() } }
+    }
     var isScanning = false
     var catalogs: [String: Catalog] = [:]
     var usage: Usage?
     var sheet: SheetKind?
     var composerInsert: String?
     var focusProject: String?
+    var cliStatus: CLIStatus = .unknown
     var showAutomation = false {
         didSet { defaults.set(showAutomation, forKey: "showAutomation") }
     }
@@ -69,6 +76,12 @@ final class Store {
         workspace = defaults.stringArray(forKey: "workspace") ?? []
         tabs = defaults.stringArray(forKey: "tabs") ?? []
         owned = Set(defaults.stringArray(forKey: "pitwallOwned") ?? [])
+    }
+
+    /// Called when a session becomes visible: now (and only now) load its transcript, follow it, and fetch its commands.
+    private func activateCurrent() {
+        guard let c = current else { return }
+        c.loadHistoryIfNeeded(); c.startTail(); ensureCatalog(c.cwd)
     }
 
     private func isOwned(_ c: Conversation) -> Bool { owned.contains(c.id) || (c.sessionID.map { owned.contains($0) } ?? false) }
@@ -169,6 +182,15 @@ final class Store {
         }
         Log.history.info("scanned \(metas.count) sessions")
         isScanning = false
+    }
+
+    /// Is the `claude` CLI installed and runnable? Surfaced as a banner so the user isn't surprised on first send.
+    func checkCLI() async {
+        guard let path = ClaudeRunner.claudePath else { cliStatus = .missing; return }
+        let (out, code) = await Shell.run("\(TerminalApp.quote(path)) --version", cwd: NSHomeDirectory(), timeout: 20)
+        let first = out.split(separator: "\n").first.map(String.init)?.trimmingCharacters(in: .whitespaces) ?? ""
+        cliStatus = (code == 0 && !first.isEmpty) ? .ok(version: first) : .missing
+        Log.app.info("claude cli check: \(code == 0 ? "ok" : "failed")")
     }
 
     func ensureCatalog(_ cwd: String) {

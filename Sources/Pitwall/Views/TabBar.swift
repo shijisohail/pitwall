@@ -78,5 +78,8 @@ private struct TabItem: View {
             Button("Fork") { store.fork(c) }.disabled(c.sessionID == nil)
         }
         .help(c.title)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(c.title), \(!c.approvals.isEmpty ? "needs your input" : c.isRunning ? "working" : "idle")")
+        .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
     }
 }
