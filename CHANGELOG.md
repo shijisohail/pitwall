@@ -6,9 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [0.1.0]
+## [1.0.0] - 2026-10-31
 
-First public version.
+First release.
 
 ### Added
 - Pit Wall board (*Working*, *Needs you*, *Done today*) with live step feeds, to-do progress and inline approvals.

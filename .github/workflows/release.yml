@@ -72,9 +72,27 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: Scripts/release.sh
 
+      - name: Compose release notes
+        env:
+          SIGNED: ${{ steps.creds.outputs.signed }}
+        run: |
+          {
+            echo "## Install"
+            echo
+            echo "Download **Pitwall-${GITHUB_REF_NAME#v}.dmg**, open it, and drag **Pitwall** to Applications. You also need [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) installed and signed in."
+            echo
+            if [ "$SIGNED" = "true" ]; then
+              echo "This build is signed with a Developer ID certificate and notarized by Apple."
+            else
+              echo "> **Unsigned build.** This DMG is ad-hoc signed and **not notarized**, so macOS will block it the first time. To approve it: open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Pitwall (or run \`xattr -dr com.apple.quarantine /Applications/Pitwall.app\`). Verify the download against the attached \`.sha256\` file."
+            fi
+            echo
+            echo "---"
+          } > release-notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ steps.creds.outputs.signed != 'true' }}
+          body_path: release-notes.md
           files: |
             dist/*.dmg
             dist/*.sha256
