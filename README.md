@@ -97,7 +97,7 @@ Plus: a 5-hour and 7-day **usage meter**, ⌘K **search across every session and
 ┌─ PIT_WALL ─────────────────────────────────────────────────────────────────────────────┐
 │  WORKING · 2              NEEDS YOU · 1                DONE TODAY · 3                  │
 │  ┌──────────────────┐     ┌──────────────────────┐     ┌──────────────────┐            │
-│  │ platform-core    │     │ platform-core        │     │ Migrate jobs     │            │
+│  │ core-service    │     │ core-service        │     │ Migrate jobs     │            │
 │  │ Refactor auth    │     │ Add rate limiting    │     │ 12 files +318 −140│           │
 │  │ ✓ Read middleware│     │ Claude wants to run  │     └──────────────────┘            │
 │  │ ✓ Edit +2 −1     │     │ $ npm install …      │     ┌──────────────────┐            │
