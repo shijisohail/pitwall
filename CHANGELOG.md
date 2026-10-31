@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [1.1.1] - Unreleased
+## [1.1.1] - 2026-10-31
 
 ### Fixed
 - Crash in the composer when attached images were cleared (sending, queueing or removing a thumbnail) while the thumbnail strip was updating.
