@@ -4,7 +4,9 @@ import Foundation
 
 /// Agent tracking, driven by a real captured stream (see AgentsFixture.swift) and by hand-built events.
 @MainActor @Suite struct AgentTrackingTests {
-    private func make() -> Conversation {
+    /// The Agent view is off by default, so tests that exercise tracking switch it on first.
+    private func make(agentsOn: Bool = true) -> Conversation {
+        AppSettings.shared.showAgents = agentsOn
         let s = makeStore()
         let c = Conversation(cwd: "/tmp"); c.store = s
         s.conversations.append(c)
@@ -31,12 +33,36 @@ import Foundation
     }
 
     @Test func settingOffTracksNothing() {
-        let saved = AppSettings.shared.showAgents
-        AppSettings.shared.showAgents = false
-        defer { AppSettings.shared.showAgents = saved }
-        let c = make()
+        let c = make(agentsOn: false)
         agentsFixtureEvents().forEach(c.handle)
         #expect(c.agents.isEmpty)
+    }
+
+    @Test func theAgentViewIsOffByDefault() {
+        let fresh = AppSettings(defaults: UserDefaults(suiteName: "agents-default-\(UUID().uuidString)")!)
+        #expect(fresh.showAgents == false)
+    }
+
+    @Test func aChosenSettingIsRemembered() {
+        let suite = "agents-remember-\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        AppSettings(defaults: d).showAgents = true
+        #expect(AppSettings(defaults: d).showAgents == true)
+    }
+
+    @Test func switchingTheViewOffClearsAgentsAndOnRebuildsThemFromHistory() async {
+        let c = make()
+        var launch = Block(kind: .tool); launch.toolName = "Agent"; launch.toolID = "tu1"; launch.inputJSON = #"{"description":"docs"}"#; launch.result = "done"
+        c.messages = [ChatMessage(role: .assistant, blocks: [launch])]
+        c.seedAgentsFromHistory()
+        #expect(c.agents.count == 1)
+        AppSettings.shared.showAgents = false                       // the store clears every session's agents
+        #expect(await waitUntil { c.agents.isEmpty })
+        agentsFixtureEvents().forEach(c.handle)
+        #expect(c.agents.isEmpty)                                   // and nothing is tracked while it is off
+        AppSettings.shared.showAgents = true                        // back on: finished agents return from the transcript
+        #expect(await waitUntil { c.agents.map(\.id) == ["tu1"] })
+        AppSettings.shared.showAgents = false
     }
 
     @Test func nestedAgentsRecordTheirParent() {

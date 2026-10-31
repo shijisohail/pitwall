@@ -76,6 +76,11 @@ final class Store {
         workspace = defaults.stringArray(forKey: "workspace") ?? []
         tabs = defaults.stringArray(forKey: "tabs") ?? []
         owned = Set(defaults.stringArray(forKey: "pitwallOwned") ?? [])
+        // Switching the Agent view on rebuilds each session's finished agents from its transcript; off clears them, so a
+        // session never shows agents that were left "working" while tracking was paused.
+        NotificationCenter.default.addObserver(forName: .agentViewChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.conversations.forEach { $0.resetAgents() } }
+        }
     }
 
     /// Called when a session becomes visible: now (and only now) load its transcript, follow it, and fetch its commands.

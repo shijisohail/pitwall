@@ -17,8 +17,14 @@ final class AppSettings {
     var confirmQuitWhileRunning: Bool { didSet { defaults.set(confirmQuitWhileRunning, forKey: "confirmQuit") } }
     /// Set once the user has seen (and dismissed) the one-time tip about macOS folder permissions.
     var permissionsTipDismissed: Bool { didSet { defaults.set(permissionsTipDismissed, forKey: "permissionsTipDismissed") } }
-    /// Track subagents and show them in the inspector's Agents tab. Off also stops the tracking.
-    var showAgents: Bool { didSet { defaults.set(showAgents, forKey: "showAgents") } }
+    /// The Agent view: track subagents and show them in the inspector's Agents tab. Opt-in (off by default); off also
+    /// stops the tracking. Changing it tells every session to rebuild or clear its agents (see `Store`).
+    var showAgents: Bool {
+        didSet {
+            defaults.set(showAgents, forKey: "showAgents")
+            if showAgents != oldValue { NotificationCenter.default.post(name: .agentViewChanged, object: nil) }
+        }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -28,7 +34,12 @@ final class AppSettings {
         animatedBackground = defaults.object(forKey: "animatedBackground") as? Bool ?? false     // costs ~4% CPU while idle, so opt-in
         confirmQuitWhileRunning = defaults.object(forKey: "confirmQuit") as? Bool ?? true
         permissionsTipDismissed = defaults.object(forKey: "permissionsTipDismissed") as? Bool ?? false
-        showAgents = defaults.object(forKey: "showAgents") as? Bool ?? true
+        showAgents = defaults.object(forKey: "showAgents") as? Bool ?? false
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
+}
+
+extension Notification.Name {
+    /// Posted when the Agent view is switched on or off.
+    static let agentViewChanged = Notification.Name("pitwall.agentViewChanged")
 }

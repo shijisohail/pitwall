@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- The Agent view is now optional and off by default. Turn it on in Settings → Agents, or from a session's … menu. Turning it on rebuilds finished agents from the session's history; turning it off hides the tab and stops tracking. Anyone who never changed the setting no longer sees the Agents tab until they enable it.
+
+### Changed
 - Fewer surprises from macOS folder-permission pop-ups: Settings gains a Permissions section (Full Disk Access status and shortcuts to the right System Settings panes), and a one-time dismissible tip on the home and welcome screens explains why macOS asks and offers a single optional alternative.
 - `Scripts/setup-local-signing.sh` creates a stable local signing identity, and `Scripts/build.sh` uses it automatically, so rebuilding on your own Mac no longer makes macOS forget your folder permissions. Docs explain why signed releases keep permissions across updates and ad-hoc ones don't.
 

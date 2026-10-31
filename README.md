@@ -216,7 +216,7 @@ UNSIGNED=1 Scripts/release.sh # builds dist/Pitwall-<version>.dmg
 
 - No embedded terminal; Pitwall hands off to Terminal.app.
 - `/rewind` checkpoints, a background-task panel and a light theme are not implemented yet.
-- Subagent activity appears only as the parent's tool card.
+- Subagent activity appears only as the parent's tool card, unless you turn on the optional Agent view (Settings → Agents, off by default).
 - It relies on observed, only partly documented behaviour of Claude Code's headless protocol, so a CLI update can break something. Please [open an issue](https://github.com/shijisohail/pitwall/issues/new/choose) if it does.
 - English only for now.
 

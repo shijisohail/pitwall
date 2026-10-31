@@ -287,6 +287,12 @@ extension Conversation {
         return (content as? [[String: Any]])?.compactMap { $0["text"] as? String }.joined(separator: "\n") ?? ""
     }
 
+    /// Start over for the current setting: cleared when the Agent view is off, rebuilt from the transcript when it is on.
+    func resetAgents() {
+        agents = []; agentSlots = [:]; agentFinishCount = 0
+        seedAgentsFromHistory()        // a no-op while the setting is off
+    }
+
     /// A reopened session has no live events, so rebuild what we can from its transcript: every `Agent` call, whether it
     /// finished, and its counts from the `<task-notification>` messages. Runs that already exist are left alone.
     func seedAgentsFromHistory() {
