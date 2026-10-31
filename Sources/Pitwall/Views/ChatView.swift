@@ -5,6 +5,7 @@ struct ChatView: View {
     @Bindable var conversation: Conversation
     @Binding var inspectorOpen: Bool
     @Environment(Store.self) private var store
+    @Bindable private var settings = AppSettings.shared
 
     private var scrollToken: Int {
         let last = conversation.messages.last?.blocks.last
@@ -103,6 +104,9 @@ struct ChatView: View {
                 Button("Hooks…") { store.sheet = .config("hooks") }
                 Button("Status…") { store.sheet = .status }
                 Button("All Commands & Skills…") { store.sheet = .commands }
+            }
+            Section("View") {
+                Toggle("Agent View", isOn: $settings.showAgents)
             }
             Section {
                 Button("Copy Session ID") {

@@ -41,8 +41,8 @@ struct SettingsView: View {
                 Toggle("Confirm before quitting while sessions are working", isOn: $settings.confirmQuitWhileRunning)
             }
             Section("Agents") {
-                Toggle("Show agent activity", isOn: $settings.showAgents)
-                Text("Adds an Agents tab to the inspector showing every subagent Claude spawns, what each one is doing, and how many there are. Turning it off also stops tracking them.")
+                Toggle("Agent view", isOn: $settings.showAgents)
+                Text("Off by default. When on, the inspector gets an Agents tab showing every subagent Claude spawns as a little bot, what each one is doing, and how many there are. Turning it off hides the tab and stops tracking. You can also switch it from a session's … menu.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Appearance") {
