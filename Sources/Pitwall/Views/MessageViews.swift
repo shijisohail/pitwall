@@ -127,14 +127,15 @@ struct ThinkingView: View {
 }
 
 struct Shimmer: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var on = false
     var body: some View {
         HStack(spacing: 5) {
             ForEach(0..<3) { i in
                 Circle().fill(.secondary).frame(width: 6, height: 6)
-                    .opacity(on ? 1 : 0.25)
-                    .animation(.easeInOut(duration: 0.6).repeatForever().delay(Double(i) * 0.15), value: on)
+                    .opacity(reduceMotion || on ? 1 : 0.25)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.6).repeatForever().delay(Double(i) * 0.15), value: on)
             }
-        }.onAppear { on = true }
+        }.onAppear { on = true }.accessibilityLabel("Claude is working")
     }
 }

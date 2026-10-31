@@ -42,3 +42,71 @@ nonisolated(unsafe) private var retainedStores: [Store] = []
 func sessionMeta(id: String = UUID().uuidString, cwd: String, title: String = "t", entrypoint: String? = "cli", path: String = "/dev/null") -> SessionMeta {
     SessionMeta(id: id, path: path, cwd: cwd, title: title, date: Date(), branch: nil, entrypoint: entrypoint, searchText: title.lowercased())
 }
+
+/// Polls until `cond` holds. It must *yield* (not block or spin the run loop): a test body already runs inside a
+/// main-queue job, so the runner's main-queue callbacks are only delivered while the test is suspended.
+@MainActor func waitUntil(_ timeout: Double = 10, _ cond: () -> Bool) async -> Bool {
+    let end = Date().addingTimeInterval(timeout)
+    while Date() < end {
+        if cond() { return true }
+        try? await Task.sleep(for: .milliseconds(20))
+    }
+    return cond()
+}
+
+func withTempDirAsync<T>(_ body: (URL) async throws -> T) async rethrows -> T {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("pitwall-tests-\(UUID().uuidString)", isDirectory: true)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    return try await body(dir)
+}
+
+/// A stand-in for `claude -p --input-format stream-json …` that speaks the real wire protocol
+/// (see docs/CLAUDE_CODE_PROTOCOL.md). Behaviour is chosen by the prompt text:
+///   "approve" → asks for tool approval and reports the verdict · "hang" → waits for an interrupt · otherwise → replies.
+let fakeClaudeScript = #"""
+#!/bin/bash
+emit() { printf '%s\n' "$1"; }
+sid="fake-session-1"
+while IFS= read -r line; do
+  rid=$(printf '%s' "$line" | sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p')
+  case "$line" in
+    *'"subtype":"initialize"'*)
+      emit '{"type":"control_response","response":{"subtype":"success","request_id":"'"$rid"'","response":{"commands":[{"name":"fake-cmd","description":"d"}],"models":[],"claude_code_version":"0.0.0-fake"}}}' ;;
+    *'"subtype":"interrupt"'*)
+      emit '{"type":"control_response","response":{"subtype":"success","request_id":"'"$rid"'","response":{}}}'
+      emit '{"type":"result","subtype":"error_during_execution","is_error":true,"session_id":"'"$sid"'"}' ;;
+    *'"type":"user"'*)
+      emit '{"type":"system","subtype":"init","session_id":"'"$sid"'","model":"fake-model"}'
+      case "$line" in
+        *approve*)
+          emit '{"type":"stream_event","event":{"type":"message_start","message":{"id":"m1"}}}'
+          emit '{"type":"control_request","request_id":"req1","request":{"subtype":"can_use_tool","tool_name":"Write","input":{"file_path":"/tmp/x","content":"hi"},"tool_use_id":"t1"}}'
+          IFS= read -r reply
+          case "$reply" in *'"behavior":"allow"'*) verdict="allowed" ;; *) verdict="denied" ;; esac
+          emit '{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}}'
+          emit '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"'"$verdict"'"}}}'
+          emit '{"type":"result","subtype":"success","is_error":false,"result":"'"$verdict"'","session_id":"'"$sid"'","total_cost_usd":0.01}' ;;
+        *hang*) : ;;
+        *)
+          emit '{"type":"stream_event","event":{"type":"message_start","message":{"id":"m1"}}}'
+          emit '{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}}'
+          emit '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hello from fake"}}}'
+          emit '{"type":"result","subtype":"success","is_error":false,"result":"hello from fake","session_id":"'"$sid"'","total_cost_usd":0.02}' ;;
+      esac ;;
+  esac
+done
+"""#
+
+/// Points the app at the fake CLI for the duration of `body`.
+@MainActor func withFakeClaude<T>(_ body: () async throws -> T) async rethrows -> T {
+    try await withTempDirAsync { dir in
+        let path = dir.appendingPathComponent("claude")
+        try? fakeClaudeScript.write(to: path, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path.path)
+        let saved = ClaudeRunner.pathOverride
+        ClaudeRunner.pathOverride = path.path
+        defer { ClaudeRunner.pathOverride = saved }
+        return try await body()
+    }
+}

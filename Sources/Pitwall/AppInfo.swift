@@ -11,6 +11,28 @@ enum AppInfo {
         return URL(string: s)
     }
 
+    /// A support snapshot. Counts and versions only: never paths, titles, prompts or transcript content.
+    @MainActor static func diagnostics(store: Store) -> String {
+        let cli: String
+        switch store.cliStatus {
+        case .ok(let v): cli = v
+        case .missing: cli = "not found"
+        case .unknown: cli = "not checked"
+        }
+        #if arch(arm64)
+        let arch = "arm64"
+        #else
+        let arch = "x86_64"
+        #endif
+        return [
+            "Pitwall \(version) (\(build))",
+            "macOS \(ProcessInfo.processInfo.operatingSystemVersionString) \(arch)",
+            "Claude Code: \(cli)",
+            "Sessions indexed: \(store.conversations.count), opened folders: \(store.workspace.count), tabs: \(store.tabs.count), running: \(store.conversations.filter(\.isRunning).count)",
+            "Default mode: \(AppSettings.shared.defaultPermission.rawValue), custom claude path: \(AppSettings.shared.claudePath.isEmpty ? "no" : "yes"), animated background: \(AppSettings.shared.animatedBackground)",
+        ].joined(separator: "\n")
+    }
+
     @MainActor static func showAbout() {
         let credits = NSAttributedString(
             string: "A native macOS front end for Claude Code.\nIndependent project, not affiliated with or endorsed by Anthropic. \"Claude\" and \"Claude Code\" are trademarks of Anthropic.\nOpen source under the MIT license.",

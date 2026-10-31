@@ -151,6 +151,23 @@ import Foundation
         #expect(d.stringArray(forKey: "tabs") == ["disk-id"])
     }
 
+    @Test func nothingIsLoadedWhileTheBoardIsShowing() async throws {
+        try await withTempDirAsync { dir in
+            let s = makeStore(); s.workspace = ["/w"]
+            let file = dir.appendingPathComponent("a.jsonl")
+            try (userRecord("hello", cwd: "/w") + assistantRecord(id: "m", [["type": "text", "text": "hi"]])).write(to: file, atomically: true, encoding: .utf8)
+            let c = Conversation(meta: sessionMeta(id: "a", cwd: "/w", path: file.path)); c.store = s
+            s.conversations.append(c)
+            s.selection = c.id                                    // e.g. the first scan picks the newest session
+            #expect(s.showBoard); #expect(c.loadState == .notLoaded)      // still on the board: transcript untouched
+            s.open(c)
+            #expect(c.loadState != .notLoaded)                    // shown now, so it loads
+            #expect(await waitUntil { c.loadState == .loaded })
+            #expect(c.messages.count == 2)
+            c.stopTail()
+        }
+    }
+
     @Test func workspaceAndTabsPersistAcrossLaunches() {
         let suite = "pitwall-tests-\(UUID().uuidString)"
         let d = UserDefaults(suiteName: suite)!

@@ -114,14 +114,18 @@ struct BoardView: View {
 struct PulseDot: View {
     let color: Color
     let pulsing: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var on = false
+
     var body: some View {
+        let animate = pulsing && !reduceMotion
         Circle().fill(color).frame(width: 8, height: 8)
             .shadow(color: pulsing ? color : .clear, radius: 5)
-            .opacity(pulsing && on ? 0.35 : 1)
-            .animation(pulsing ? .easeInOut(duration: 0.9).repeatForever() : .default, value: on)
+            .opacity(animate && on ? 0.35 : 1)
+            .animation(animate ? .easeInOut(duration: 0.9).repeatForever() : .default, value: on)
             .onAppear { on = true }
-            .onChange(of: pulsing) { _, p in on = false; if p { DispatchQueue.main.async { on = true } } }
+            .onChange(of: animate) { _, p in on = false; if p { DispatchQueue.main.async { on = true } } }
+            .accessibilityHidden(true)      // status is spoken by the row/card/tab label instead
     }
 }
 
@@ -168,6 +172,9 @@ struct SessionCard: View {
         .glassCard(18, tint: c.approvals.isEmpty ? nil : .orange.opacity(0.16))
         .contentShape(RoundedRectangle(cornerRadius: 18))
         .onTapGesture { store.open(c) }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(c.title), \((c.cwd as NSString).lastPathComponent), \(!c.approvals.isEmpty ? "needs your input" : c.isRunning ? "working" : "idle")")
+        .accessibilityAction(named: "Open") { store.open(c) }
     }
 
     private var meta: some View {

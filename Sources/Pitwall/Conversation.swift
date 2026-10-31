@@ -50,6 +50,7 @@ final class Conversation: Identifiable {
     init(cwd: String) {
         id = UUID().uuidString
         self.cwd = cwd; title = Self.placeholderTitle; updatedAt = Date()
+        permission = AppSettings.shared.defaultPermission
     }
 
     /// A past Claude Code session: metadata now, transcript loaded on demand.
@@ -57,6 +58,7 @@ final class Conversation: Identifiable {
         id = m.id; cwd = m.cwd; branch = m.branch; historyPath = m.path; entrypoint = m.entrypoint
         title = m.title; sessionID = m.id; updatedAt = m.date
         loadState = .notLoaded; searchText = m.searchText
+        permission = AppSettings.shared.defaultPermission
     }
 
     func update(from m: SessionMeta) {
@@ -341,7 +343,7 @@ final class Conversation: Identifiable {
         else if e["is_error"] as? Bool == true || (sub != "success" && !sub.isEmpty) {
             fail(text.isEmpty ? "The run ended with an error (\(sub))." : text)
         } else if !turnHadAssistant, !text.isEmpty {
-            card(lastPrompt, text)       // a slash command's own output, e.g. /context or /usage
+            card(lastPrompt, Limits.clip(text))       // a slash command's own output, e.g. /context or /usage
         }
         isRunning = false; turnStart = nil; approvals.removeAll(); retryNote = nil; stopRequested = false
         updatedAt = Date()
@@ -403,7 +405,7 @@ final class Conversation: Identifiable {
             var out = ""
             if let s = c["content"] as? String { out = s }
             else if let arr = c["content"] as? [[String: Any]] { out = arr.compactMap { $0["text"] as? String }.joined(separator: "\n") }
-            messages[mi].blocks[bi].result = out
+            messages[mi].blocks[bi].result = Limits.clip(out)
             messages[mi].blocks[bi].isError = c["is_error"] as? Bool ?? false
         }
     }
