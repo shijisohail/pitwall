@@ -5,6 +5,7 @@ import Foundation
 struct TaskNotification: Identifiable, Equatable {
     var id: String { taskID + String(raw.hashValue) }
     var taskID = ""
+    var toolUseID = ""
     var status = ""
     var summary = ""
     var outputFile: String?
@@ -35,7 +36,7 @@ struct TaskNotification: Identifiable, Equatable {
             let v = body[a.upperBound..<b.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
             return v.isEmpty ? nil : v
         }
-        return TaskNotification(taskID: tag("task-id") ?? "", status: tag("status") ?? "", summary: tag("summary") ?? "",
+        return TaskNotification(taskID: tag("task-id") ?? "", toolUseID: tag("tool-use-id") ?? "", status: tag("status") ?? "", summary: tag("summary") ?? "",
                                 outputFile: tag("output-file"), durationMS: tag("duration_ms").flatMap(Int.init),
                                 toolUses: tag("tool_uses").flatMap(Int.init), tokens: tag("subagent_tokens").flatMap(Int.init), raw: raw)
     }

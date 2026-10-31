@@ -15,6 +15,8 @@ final class AppSettings {
     }
     var animatedBackground: Bool { didSet { defaults.set(animatedBackground, forKey: "animatedBackground") } }
     var confirmQuitWhileRunning: Bool { didSet { defaults.set(confirmQuitWhileRunning, forKey: "confirmQuit") } }
+    /// Track subagents and show them in the inspector's Agents tab. Off also stops the tracking.
+    var showAgents: Bool { didSet { defaults.set(showAgents, forKey: "showAgents") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -23,6 +25,7 @@ final class AppSettings {
         claudePath = defaults.string(forKey: "claudePath") ?? ""
         animatedBackground = defaults.object(forKey: "animatedBackground") as? Bool ?? false     // costs ~4% CPU while idle, so opt-in
         confirmQuitWhileRunning = defaults.object(forKey: "confirmQuit") as? Bool ?? true
+        showAgents = defaults.object(forKey: "showAgents") as? Bool ?? true
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
 }

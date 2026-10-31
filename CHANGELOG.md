@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Agents tab in the inspector: every subagent Claude spawns appears as a little bot on a canvas. It moves to Think, Read, Search & web, Edit or Run as it works, shows what it is doing in a speech bubble, springs out of the agent that spawned it, and rests along the bottom when done. A roster below lists each agent with its state, time, tools and tokens, and expands to its task, steps and report. Reopened sessions show finished agents too. Turn it off in Settings, Agents.
+
 ### Fixed
 - Markdown tables render as real tables (header row, column alignment, wrapping cells, zebra rows, bold and code inside cells) instead of raw `| pipes |` in a code block. Wide tables shrink to fit the chat instead of overflowing.
 
