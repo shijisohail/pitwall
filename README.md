@@ -20,10 +20,10 @@
 
 ---
 
-> ### 🎉 Pitwall v1.2.0 is out
-> **[⬇️ Download Pitwall-1.2.0.dmg](https://github.com/shijisohail/pitwall/releases/download/v1.2.0/Pitwall-1.2.0.dmg)** · [Release notes](https://github.com/shijisohail/pitwall/releases/tag/v1.2.0) · [Changelog](CHANGELOG.md)
+> ### 🎉 Pitwall v1.2.1 is out
+> **[⬇️ Download Pitwall-1.2.1.dmg](https://github.com/shijisohail/pitwall/releases/download/v1.2.1/Pitwall-1.2.1.dmg)** · [Release notes](https://github.com/shijisohail/pitwall/releases/tag/v1.2.1) · [Changelog](CHANGELOG.md)
 >
-> New: an optional **Agent view**, real markdown tables, a message queue, drag and drop, and clearer macOS permission handling.
+> New: clickable file names and links, a running indicator, scrollable long prompts. 1.2 added an optional **Agent view**, real markdown tables and clearer macOS permission handling.
 >
 > The first builds are *ad-hoc signed, not notarized*, so macOS asks you to approve them once. See [Install](#install) (it takes ten seconds).
 
@@ -133,7 +133,7 @@ Plus: a 5-hour and 7-day **usage meter**, ⌘K **search across every session and
    - run `xattr -dr com.apple.quarantine /Applications/Pitwall.app` in Terminal.
 4. Click **Choose Folder…** and pick a project.
 
-> Only approve builds you trust. Compare the `.dmg`'s SHA-256 with the `.sha256` file on the release (`shasum -a 256 -c Pitwall-1.2.0.dmg.sha256`), or build it yourself from source below. A copy you build on your own Mac never shows the warning.
+> Only approve builds you trust. Compare the `.dmg`'s SHA-256 with the `.sha256` file on the release (`shasum -a 256 -c Pitwall-1.2.1.dmg.sha256`), or build it yourself from source below. A copy you build on your own Mac never shows the warning.
 
 ### Folder permission pop-ups
 
