@@ -21,6 +21,8 @@ Nothing. There is no telemetry, analytics, crash reporting, account system or up
 
 Pitwall launches your installed Claude Code CLI. That CLI sends your prompts and the context it gathers to Anthropic under Claude Code's own terms and your own account. Pitwall does not intercept, copy or forward that traffic.
 
+Commands Claude runs are child processes of Pitwall, so macOS attributes what they do to Pitwall. That is why you may see a macOS notice such as "“Pitwall” was prevented from modifying apps" when a command touches another app. It is macOS blocking that command, not Pitwall changing anything; see [Troubleshooting](README.md#troubleshooting).
+
 ## Logging
 
 Pitwall writes to the unified log (`Console.app`) with the subsystem equal to its bundle id. It records events such as "started claude" and "scanned N sessions", never prompts, paths or transcript text.

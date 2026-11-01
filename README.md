@@ -211,6 +211,7 @@ UNSIGNED=1 Scripts/release.sh # builds dist/Pitwall-<version>.dmg
 - **"Claude Code wasn't found" banner:** install Claude Code, or choose its location in Settings (⌘,). Pitwall looks in `~/.local/bin`, Homebrew and your login shell's `PATH`.
 - **"Not logged in" in a session:** click *Log in in Terminal* on the message, or run `claude auth login`.
 - **macOS asks about Desktop / Documents / Downloads:** that is Claude Code, started by Pitwall, reaching a folder you opened. Allow it for the folders you want to work in.
+- **"“Pitwall” was prevented from modifying apps on your Mac":** macOS's *App Management* protection, and it blocked the change, so nothing was modified. Pitwall itself never writes to other apps. Every command Claude runs (for example launching Chrome headless to test a page, or an installer) counts as Pitwall's to macOS, so a command that touches an app bundle is blocked and reported under Pitwall's name. To let such commands through, turn Pitwall on under System Settings → Privacy & Security → App Management; otherwise ignore the notice. If you build from source, run `Scripts/setup-local-signing.sh` once, because an ad-hoc build loses this permission on every rebuild.
 - **"Live in a terminal" banner:** the session is also running in a terminal. Pitwall follows it read-only; use *Fork & Continue Here* to work on a copy.
 - **Reporting a bug:** Help → **Copy Diagnostics**, and paste it into the issue.
 
