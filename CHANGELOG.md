@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 - A long prompt in the composer is now scrollable: the box grows with your text up to about ten lines, then scrolls, so you can read and edit the top of a long or pasted prompt. Queued messages show their full text on hover.
+- Links in replies can be clicked again. They were styled as links but did nothing, because SwiftUI's selectable text swallows clicks. Text that contains a link is now left non-selectable so it opens (right-click it for Copy Text); everything else, including code blocks and tables, stays selectable.
+
+### Added
+- File names in replies are clickable. A code span such as `reports/summary.pdf`, `src/App.swift:42` or `~/notes.md` that names a file or folder that exists (relative to the session's folder, or absolute) opens it; an app or script is revealed in Finder instead of launched. A bare file name that follows a mentioned folder ("Files are in `reports/`:" then the names) resolves inside that folder. Names that don't exist, and ordinary code, stay plain.
 
 ## [1.2.0] - 2026-11-01
 
