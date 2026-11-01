@@ -22,7 +22,11 @@ struct RootView: View {
         .background { AuroraBackground() }
         .dropDestination(for: URL.self) { urls, _ in store.openDropped(urls) }
         .sheet(item: $store.sheet) { SheetHost(kind: $0) }
-        .environment(\.openURL, OpenURLAction { LinkPolicy.allows($0) ? .systemAction : .discarded })
+        .environment(\.openURL, OpenURLAction { url in
+            // A file named in a reply: open it, or reveal it if it is an app or script (never launch it).
+            if url.scheme == FileLinks.scheme { MainActor.assumeIsolated { FilePolicy.openOrReveal(url.path) }; return .handled }
+            return LinkPolicy.allows(url) ? .systemAction : .discarded
+        })
         .task { await store.checkCLI() }
         .task {
             await store.scan()
