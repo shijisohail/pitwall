@@ -63,6 +63,8 @@ private func inline(_ s: String, cwd: String? = nil, bases: [String] = []) -> At
     let src = (try? AttributedString(markdown: s, options: opts)) ?? AttributedString(s)
     var a = src
     for run in src.runs {
+        // Only Pitwall itself creates pitwall-file links (below, for paths it verified). One in the text is forged by the model.
+        if run.link?.scheme == FileLinks.scheme { a[run.range].link = nil; continue }
         if let i = run.inlinePresentationIntent, i.contains(.code) {
             a[run.range].font = .system(size: 13, design: .monospaced)
             a[run.range].backgroundColor = Color.primary.opacity(0.12)
