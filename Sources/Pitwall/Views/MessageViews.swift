@@ -34,7 +34,7 @@ struct MessageView: View {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(message.blocks) { b in
                     switch b.kind {
-                    case .text: MarkdownView(text: b.text)
+                    case .text: MarkdownView(text: b.text, cwd: cwd)
                     case .thinking: ThinkingView(text: b.text, live: live)
                     case .tool: ToolCard(block: b, live: live)
                     case .notice: NoticeLine(text: b.text)

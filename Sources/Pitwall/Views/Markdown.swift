@@ -57,48 +57,82 @@ private func parse(_ text: String) -> [MD] {
     return out
 }
 
-private func inline(_ s: String) -> AttributedString {
+/// Inline markdown. With a `cwd`, code spans and relative links that name an existing file or folder become clickable.
+private func inline(_ s: String, cwd: String? = nil, bases: [String] = []) -> AttributedString {
     let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     let src = (try? AttributedString(markdown: s, options: opts)) ?? AttributedString(s)
     var a = src
     for run in src.runs {
+        // Only Pitwall itself creates pitwall-file links (below, for paths it verified). One in the text is forged by the model.
+        if run.link?.scheme == FileLinks.scheme { a[run.range].link = nil; continue }
         if let i = run.inlinePresentationIntent, i.contains(.code) {
             a[run.range].font = .system(size: 13, design: .monospaced)
             a[run.range].backgroundColor = Color.primary.opacity(0.12)
+            if let cwd, run.link == nil, let f = FileLinks.resolve(String(src[run.range].characters), cwd: cwd, bases: bases),
+               let u = FileLinks.link(for: f) { a[run.range].link = u }
+        } else if let cwd, let l = run.link, l.scheme == nil || l.scheme == "file" {
+            // [report](reports/a.pdf) or a file: link: only if it points at something that exists.
+            let raw = l.scheme == "file" ? l.path : (l.absoluteString.removingPercentEncoding ?? l.absoluteString)
+            if let f = FileLinks.resolve(raw, cwd: cwd, bases: bases), let u = FileLinks.link(for: f) { a[run.range].link = u }
+            else { a[run.range].link = nil }
         }
     }
     return a
 }
 
-struct MarkdownView: View {
-    let text: String
+/// A run of markdown text. Plain text can be selected, but SwiftUI's selectable `Text` swallows clicks, so a link in it
+/// is styled yet dead. Text that contains a link is therefore left non-selectable so the link opens (Copy is in its menu).
+private struct MDText: View {
+    let source: String
+    var cwd: String?
+    var bases: [String] = []
+    var font: Font?
+    var color: Color?
 
     var body: some View {
+        let a = inline(source, cwd: cwd, bases: bases)
+        let t = Text(a).font(font).foregroundStyle(color ?? .primary).lineSpacing(3)
+        if a.runs.contains(where: { $0.link != nil }) {
+            t.contextMenu {
+                Button("Copy Text") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(a.characters), forType: .string) }
+            }
+        } else {
+            t.textSelection(.enabled)
+        }
+    }
+}
+
+struct MarkdownView: View {
+    let text: String
+    /// The session's folder, so file names in the text can be opened. Nil where there isn't one.
+    var cwd: String?
+
+    var body: some View {
+        let bases = cwd == nil ? [] : FileLinks.mentionedDirectories(in: text, cwd: cwd)
         VStack(alignment: .leading, spacing: 10) {
             ForEach(parse(text)) { block in
                 switch block {
                 case .para(_, let s):
-                    Text(inline(s)).lineSpacing(3)
+                    MDText(source: s, cwd: cwd, bases: bases)
                 case .heading(_, let n, let s):
-                    Text(inline(s)).font(.system(size: [0, 22, 19, 16, 15][n], weight: .semibold)).padding(.top, 4)
+                    MDText(source: s, cwd: cwd, bases: bases, font: .system(size: [0, 22, 19, 16, 15][n], weight: .semibold)).padding(.top, 4)
                 case .bullet(_, let indent, let marker, let s):
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(marker).foregroundStyle(.secondary).frame(minWidth: 14, alignment: .trailing)
-                        Text(inline(s)).lineSpacing(3)
+                        MDText(source: s, cwd: cwd, bases: bases)
                     }.padding(.leading, CGFloat(indent) * 18)
                 case .quote(_, let s):
-                    Text(inline(s)).foregroundStyle(.secondary).padding(.leading, 12)
+                    MDText(source: s, cwd: cwd, bases: bases, color: .secondary).padding(.leading, 12)
                         .overlay(alignment: .leading) { Capsule().fill(.secondary.opacity(0.5)).frame(width: 3) }
                 case .rule:
                     Divider()
                 case .code(_, let lang, let s):
-                    CodeBlock(lang: lang, code: s)
+                    CodeBlock(lang: lang, code: s).textSelection(.enabled)
                 case .table(_, let t):
-                    TableView(table: t)
+                    TableView(table: t).textSelection(.enabled)
                 }
             }
         }
-        .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
