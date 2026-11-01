@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Links in replies can be clicked again. They were styled as links but did nothing, because SwiftUI's selectable text swallows clicks. Text that contains a link is now left non-selectable so it opens (right-click it for Copy Text); everything else, including code blocks and tables, stays selectable.
+
 ## [1.2.0] - 2026-11-01
 
 ### Added
