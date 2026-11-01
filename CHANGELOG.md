@@ -6,15 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-### Changed
-- The Agent view is now optional and off by default. Turn it on in Settings → Agents, or from a session's … menu. Turning it on rebuilds finished agents from the session's history; turning it off hides the tab and stops tracking. Anyone who never changed the setting no longer sees the Agents tab until they enable it.
+## [1.2.0] - 2026-11-01
+
+### Added
+- Agent view (optional, off by default): when Claude spawns subagents, an Agents tab in the inspector shows each one as a little bot on a canvas. It moves to Think, Read, Search & web, Edit or Run as it works, shows what it is doing in a speech bubble, springs out of the agent that spawned it, and rests along the bottom when done. A roster below lists each agent with its state, time, tools and tokens, and expands to its task, steps and report. Reopened sessions show finished agents too. Turn it on in Settings, Agents, or from a session's … menu; turning it off hides the tab and stops tracking.
 
 ### Changed
 - Fewer surprises from macOS folder-permission pop-ups: Settings gains a Permissions section (Full Disk Access status and shortcuts to the right System Settings panes), and a one-time dismissible tip on the home and welcome screens explains why macOS asks and offers a single optional alternative.
 - `Scripts/setup-local-signing.sh` creates a stable local signing identity, and `Scripts/build.sh` uses it automatically, so rebuilding on your own Mac no longer makes macOS forget your folder permissions. Docs explain why signed releases keep permissions across updates and ad-hoc ones don't.
-
-### Added
-- Agents tab in the inspector: every subagent Claude spawns appears as a little bot on a canvas. It moves to Think, Read, Search & web, Edit or Run as it works, shows what it is doing in a speech bubble, springs out of the agent that spawned it, and rests along the bottom when done. A roster below lists each agent with its state, time, tools and tokens, and expands to its task, steps and report. Reopened sessions show finished agents too. Turn it off in Settings, Agents.
+- Release builds are never signed with the local development identity: `release.sh`'s unsigned path now names ad-hoc signing explicitly.
 
 ### Fixed
 - Markdown tables render as real tables (header row, column alignment, wrapping cells, zebra rows, bold and code inside cells) instead of raw `| pipes |` in a code block. Wide tables shrink to fit the chat instead of overflowing.

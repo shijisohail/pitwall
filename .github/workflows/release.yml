@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 60
     environment: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Tag must match VERSION
         run: test "v$(tr -d '[:space:]' < VERSION)" = "$GITHUB_REF_NAME"
