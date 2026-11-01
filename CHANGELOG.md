@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Type anywhere in a chat, as in a terminal. After clicking the transcript, selecting text or tapping a button you no longer need to click the prompt box: just type, and the keystrokes go into it, after any draft already there. Shortcuts (⌘ or ⌃), Space, arrows, Return, Tab and Escape are left alone (so buttons and scrolling keep working), and other windows (Settings, sheets, alerts) are never affected.
+- Prompt keywords are highlighted. In the input as you type, and in the message once sent: `ultrathink`, `ultracode` and `ultraplan` anywhere in the prompt (matched the way Claude Code matches `ultrathink`: a whole word, any case), a `/command` at the start (only when it names a real command, so a half-typed one stays plain), `@file` mentions, and a leading `!` for a shell command. Sent messages show them in colour (these keywords in a per-letter rainbow); the input tints a highlight behind the text, so the text and cursor are untouched.
+
+### Fixed
+- Returning to the window, or closing a sheet, no longer leaves your draft fully selected (where the next keystroke would have replaced all of it); the cursor goes to the end instead.
+
 ### Documentation
 - Explained the macOS notice "“Pitwall” was prevented from modifying apps on your Mac" (README Troubleshooting, PRIVACY): it is App Management blocking a command Claude ran, which macOS attributes to Pitwall, and nothing was changed.
 

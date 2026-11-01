@@ -58,6 +58,12 @@ enum TerminalApp {
     }
 }
 
+/// Whether `name` (without the slash) is a command Claude Code or Pitwall would run, ignoring case.
+func isKnownCommand(_ name: String, in catalog: Catalog) -> Bool {
+    catalog.commands.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        || nativeCommands.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+}
+
 /// Commands Pitwall implements itself because the CLI only runs them in its terminal UI (or because a native UI is nicer).
 let nativeCommands: [SlashCommand] = [
     ("clear", "Start a new session in this project"),
