@@ -48,6 +48,7 @@ struct ChatView: View {
                 VStack(spacing: 10) {
                     if conversation.externallyActive { LiveBanner(conversation: conversation) }
                     if let r = conversation.retryNote { Text(r).font(.caption).foregroundStyle(.orange) }
+                    RunningBar(conversation: conversation)
                     ApprovalStack(conversation: conversation)
                     Composer(conversation: conversation)
                 }

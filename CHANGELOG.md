@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A running indicator above the composer while a session is working: a pulsing dot, what Claude is doing right now ("Reading Composer.swift", "Run the tests", "Waiting for your approval"), a live timer, queued-message and agent counts, and a sweeping line. Amber while it waits for you.
+
+### Fixed
+- The cursor is ready to type more often: the composer takes focus back when you return to the app, after a sheet closes, after you Allow or Deny a request, and once a reopened session finishes loading.
+
 ## [1.2.0] - 2026-11-01
 
 ### Added

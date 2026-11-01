@@ -88,4 +88,38 @@ extension Conversation {
     }
 
     var latestPlan: String? { latestTool("ExitPlanMode")?.input["plan"] as? String }
+
+    /// What the running turn is doing right now, in a few words, for the status bar above the composer.
+    var activityText: String {
+        if !approvals.isEmpty { return "Waiting for your approval" }
+        guard messages.last?.role == .assistant, let m = messages.last else { return "Thinking…" }
+        if let t = m.blocks.last(where: { $0.kind == .tool && $0.result == nil }) { return Self.activity(for: t) }
+        switch m.blocks.last?.kind {
+        case .thinking: return "Thinking…"
+        case .text: return "Writing…"
+        default: return "Working…"
+        }
+    }
+
+    static func activity(for b: Block) -> String {
+        let i = b.input
+        func file() -> String { ((i["file_path"] as? String ?? i["notebook_path"] as? String ?? "") as NSString).lastPathComponent }
+        func tidy(_ s: String) -> String { let one = s.replacingOccurrences(of: "\n", with: " "); return one.count > 64 ? String(one.prefix(64)) + "…" : one }
+        let verb: String, detail: String
+        switch b.toolName {
+        case "Read": (verb, detail) = ("Reading", file())
+        case "Edit", "MultiEdit", "NotebookEdit": (verb, detail) = ("Editing", file())
+        case "Write": (verb, detail) = ("Writing", file())
+        case "Bash":
+            // Claude's own description is already a phrase ("Run the tests"); only a bare command needs a verb.
+            if let d = i["description"] as? String, !d.isEmpty { return tidy(d) }
+            (verb, detail) = ("Running", i["command"] as? String ?? "")
+        case "Grep", "Glob": (verb, detail) = ("Searching", b.toolSummary)
+        case "WebFetch", "WebSearch": (verb, detail) = ("Fetching", b.toolSummary)
+        case "Agent", "Task": return "Agent: " + tidy(b.toolSummary.isEmpty ? "working" : b.toolSummary)
+        case "TodoWrite": (verb, detail) = ("Planning", "")
+        default: (verb, detail) = (b.toolName.hasPrefix("mcp__") ? "Using" : "Running", b.toolSummary.isEmpty ? b.toolName.replacingOccurrences(of: "mcp__", with: "") : b.toolSummary)
+        }
+        return detail.isEmpty ? verb + "…" : "\(verb) \(tidy(detail))"
+    }
 }

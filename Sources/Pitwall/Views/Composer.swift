@@ -124,7 +124,16 @@ struct Composer: View {
         .panel(RoundedRectangle(cornerRadius: 12), border: HTB.green.opacity(0.35))
         .overlay(alignment: .topLeading) { menu.alignmentGuide(.top) { $0[.bottom] + 8 } }
         .onAppear { focused = true }
+        // onAppear can fire before the window is ready to hand out focus, so ask once more after the first layout.
+        .task { try? await Task.sleep(for: .milliseconds(150)); focused = true }
         .onChange(of: conversation.id) { focused = true }
+        // The cursor should always be ready: take focus back whenever something else had it.
+        .onChange(of: store.sheet) { if store.sheet == nil { focused = true } }                                  // a sheet closed
+        .onChange(of: conversation.approvals.isEmpty) { if conversation.approvals.isEmpty { focused = true } }  // after Allow / Deny
+        .onChange(of: conversation.loadState) { if conversation.loadState == .loaded { focused = true } }       // history finished loading
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            if store.sheet == nil { focused = true }                                                            // coming back to the app
+        }
         .onChange(of: store.composerInsert) { if let s = store.composerInsert { text = s; store.composerInsert = nil; focused = true } }
         .onPasteCommand(of: [.image, .png, .tiff]) { _ in pasteImages() }
         .onChange(of: conversation.draftAppend) { flushDraftAppend() }
