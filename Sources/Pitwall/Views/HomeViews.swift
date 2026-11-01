@@ -103,6 +103,10 @@ struct HomeView: View {
         .scrollIndicators(.hidden)
         .onChange(of: store.focusProject) { target = nil }
         .onAppear { focused = true }
+        .task { try? await Task.sleep(for: .milliseconds(150)); focused = true }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            if store.sheet == nil { focused = true }
+        }
     }
 
     // MARK: Hero
