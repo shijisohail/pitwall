@@ -70,6 +70,26 @@ private func inline(_ s: String) -> AttributedString {
     return a
 }
 
+/// A run of markdown text. Plain text can be selected, but SwiftUI's selectable `Text` swallows clicks, so a link in it
+/// is styled yet dead. Text that contains a link is therefore left non-selectable so the link opens (Copy is in its menu).
+private struct MDText: View {
+    let source: String
+    var font: Font?
+    var color: Color?
+
+    var body: some View {
+        let a = inline(source)
+        let t = Text(a).font(font).foregroundStyle(color ?? .primary).lineSpacing(3)
+        if a.runs.contains(where: { $0.link != nil }) {
+            t.contextMenu {
+                Button("Copy Text") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(a.characters), forType: .string) }
+            }
+        } else {
+            t.textSelection(.enabled)
+        }
+    }
+}
+
 struct MarkdownView: View {
     let text: String
 
@@ -78,27 +98,26 @@ struct MarkdownView: View {
             ForEach(parse(text)) { block in
                 switch block {
                 case .para(_, let s):
-                    Text(inline(s)).lineSpacing(3)
+                    MDText(source: s)
                 case .heading(_, let n, let s):
-                    Text(inline(s)).font(.system(size: [0, 22, 19, 16, 15][n], weight: .semibold)).padding(.top, 4)
+                    MDText(source: s, font: .system(size: [0, 22, 19, 16, 15][n], weight: .semibold)).padding(.top, 4)
                 case .bullet(_, let indent, let marker, let s):
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(marker).foregroundStyle(.secondary).frame(minWidth: 14, alignment: .trailing)
-                        Text(inline(s)).lineSpacing(3)
+                        MDText(source: s)
                     }.padding(.leading, CGFloat(indent) * 18)
                 case .quote(_, let s):
-                    Text(inline(s)).foregroundStyle(.secondary).padding(.leading, 12)
+                    MDText(source: s, color: .secondary).padding(.leading, 12)
                         .overlay(alignment: .leading) { Capsule().fill(.secondary.opacity(0.5)).frame(width: 3) }
                 case .rule:
                     Divider()
                 case .code(_, let lang, let s):
-                    CodeBlock(lang: lang, code: s)
+                    CodeBlock(lang: lang, code: s).textSelection(.enabled)
                 case .table(_, let t):
-                    TableView(table: t)
+                    TableView(table: t).textSelection(.enabled)
                 }
             }
         }
-        .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
