@@ -23,8 +23,20 @@ ARCHS="${ARCHS:-arm64 x86_64}"
 # Default identity: a stable local one if Scripts/setup-local-signing.sh created it (so macOS keeps your folder
 # permissions across rebuilds), else ad-hoc.
 LOCAL_ID="Pitwall Local Signing"
+IDENTITY_CHOSEN_BY_CALLER="${SIGN_IDENTITY:+1}"     # a release script passes its own identity; don't nag it
 if [[ -z "${SIGN_IDENTITY:-}" ]]; then
-  if security find-identity -v -p codesigning 2>/dev/null | grep -qF "\"$LOCAL_ID\""; then SIGN_IDENTITY="$LOCAL_ID"; else SIGN_IDENTITY="-"; fi
+  # Capture the lists first: `security ... | grep -q` under pipefail can fail with SIGPIPE when grep exits early.
+  valid_ids="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+  any_ids="$(security find-identity -p codesigning 2>/dev/null || true)"
+  if grep -qF "\"$LOCAL_ID\"" <<<"$valid_ids"; then
+    SIGN_IDENTITY="$LOCAL_ID"
+  else
+    SIGN_IDENTITY="-"
+    # Imported but not trusted yet (setup was cancelled at the password step): codesign can't use it.
+    if grep -qF "\"$LOCAL_ID\"" <<<"$any_ids"; then
+      echo "warning: \"$LOCAL_ID\" is in your keychain but isn't trusted for code signing yet. Run Scripts/setup-local-signing.sh again and answer y to finish." >&2
+    fi
+  fi
 fi
 
 # SDK: use Xcode's when it works. A bare Command Line Tools install may default to an SDK newer than its
@@ -72,6 +84,15 @@ if ! codesign --force --options runtime $ts --entitlements Resources/Pitwall.ent
   fi
 fi
 codesign --verify --strict --verbose=1 "$APP"
+
+if [[ "$SIGN_IDENTITY" == "-" && -z "$IDENTITY_CHOSEN_BY_CALLER" ]]; then
+  cat >&2 <<'NOTE'
+
+note: this build is ad-hoc signed. macOS identifies an ad-hoc build by its hash, which changes on every rebuild, so it
+      treats each build as a new app: it forgets the folder permissions (Documents, Desktop, Downloads...) and Full Disk
+      Access you gave the previous one, and asks again. Run Scripts/setup-local-signing.sh once to stop that.
+NOTE
+fi
 
 echo "==> built $APP"
 [[ "${1:-}" == "run" ]] && open "$APP"

@@ -78,6 +78,7 @@ struct Composer: View {
             ScrollView {
             TextField(conversation.isRunning ? "queue a message… it sends when Claude finishes" : "ask claude…   / commands · @ files · ! shell", text: $text, axis: .vertical)
                 .textFieldStyle(.plain).font(.system(size: 15)).lineLimit(1...)
+                .background(alignment: .topLeading) { highlightBackdrop }
                 .focused($focused).onSubmit(send)
                 .onKeyPress(.return, phases: .down) { p in
                     if p.modifiers.contains(.shift) { text += "\n"; return .handled }
@@ -132,6 +133,14 @@ struct Composer: View {
         .panel(RoundedRectangle(cornerRadius: 12), border: HTB.green.opacity(0.35))
         .overlay(alignment: .topLeading) { menu.alignmentGuide(.top) { $0[.bottom] + 8 } }
         .onAppear { focused = true }
+        // Terminal-style typing: a keystroke that lands on the transcript or a button is redirected here (see TypeToFocus).
+        .background(WindowAccessor { w in
+            let id = ObjectIdentifier(conversation)
+            // Toggling makes sure SwiftUI re-applies focus even if it still believes the box has it.
+            if let w { TypeToFocus.shared.attach(owner: id, window: w) { focused = false; DispatchQueue.main.async { focused = true } } }
+            else { TypeToFocus.shared.detach(owner: id) }
+        }.id(conversation.id))
+        .onChange(of: focused) { if focused { TypeToFocus.shared.caretToEndIfAllSelected() } }      // don't leave a draft selected-all
         // onAppear can fire before the window is ready to hand out focus, so ask once more after the first layout.
         .task { try? await Task.sleep(for: .milliseconds(150)); focused = true }
         .onChange(of: conversation.id) { focused = true }
@@ -148,6 +157,17 @@ struct Composer: View {
     }
 
     // MARK: Pieces
+
+    /// Tints `ultrathink`, `ultracode`, a leading `/command`, `@files` and a leading `!` as you type. It is the same text,
+    /// invisible, drawn behind the field, so the field's own text and caret are untouched. Only built when something matches.
+    @ViewBuilder private var highlightBackdrop: some View {
+        let known: ((String) -> Bool)? = text.hasPrefix("/") ? { isKnownCommand($0, in: catalog) } : nil
+        if let tinted = PromptHighlight.backdrop(text, isKnownCommand: known) {
+            Text(tinted).font(.system(size: 15)).foregroundStyle(.clear)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .allowsHitTesting(false).accessibilityHidden(true)
+        }
+    }
 
     @ViewBuilder private var queueList: some View {
         if !conversation.queue.isEmpty {

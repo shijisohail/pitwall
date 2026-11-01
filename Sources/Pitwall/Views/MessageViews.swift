@@ -22,7 +22,7 @@ struct MessageView: View {
                             Image(nsImage: img).resizable().scaledToFit().frame(maxHeight: 180)
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                         } else if b.kind == .text, !parts[i].rest.isEmpty {
-                            Text(parts[i].rest).textSelection(.enabled).lineSpacing(3)
+                            Text(PromptHighlight.sent(parts[i].rest, isKnownCommand: parts[i].rest.hasPrefix("/") ? { isKnownCommand($0, in: Store.shared.catalog(cwd)) } : nil)).textSelection(.enabled).lineSpacing(3)
                                 .padding(.horizontal, 16).padding(.vertical, 11)
                                 .panel(RoundedRectangle(cornerRadius: 10), tint: HTB.green.opacity(0.09), border: HTB.green.opacity(0.4))
                         }
