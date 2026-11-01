@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- A long prompt in the composer is now scrollable: the box grows with your text up to about ten lines, then scrolls, so you can read and edit the top of a long or pasted prompt. Queued messages show their full text on hover.
+
 ## [1.2.0] - 2026-11-01
 
 ### Added

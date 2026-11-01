@@ -10,6 +10,9 @@ struct Composer: View {
     @State private var dismissedFor: String?
     @State private var files: [String] = []
     @FocusState private var focused: Bool
+    @State private var fieldHeight: CGFloat = 22
+    /// The prompt box grows with the text up to this height, then scrolls.
+    private static let maxFieldHeight: CGFloat = 220
 
     private var images: [NSImage] { conversation.draftImages }
     private var catalog: Catalog { store.catalog(conversation.cwd) }
@@ -70,10 +73,11 @@ struct Composer: View {
                 }
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text("❯").font(.system(size: 15, weight: .bold, design: .monospaced)).foregroundStyle(HTB.green)
+            HStack(alignment: .top, spacing: 10) {
+            Text("❯").font(.system(size: 15, weight: .bold, design: .monospaced)).foregroundStyle(HTB.green).padding(.top, 1)
+            ScrollView {
             TextField(conversation.isRunning ? "queue a message… it sends when Claude finishes" : "ask claude…   / commands · @ files · ! shell", text: $text, axis: .vertical)
-                .textFieldStyle(.plain).font(.system(size: 15)).lineLimit(1...9)
+                .textFieldStyle(.plain).font(.system(size: 15)).lineLimit(1...)
                 .focused($focused).onSubmit(send)
                 .onKeyPress(.return, phases: .down) { p in
                     if p.modifiers.contains(.shift) { text += "\n"; return .handled }
@@ -97,6 +101,10 @@ struct Composer: View {
                     return .ignored
                 }
                 .onChange(of: text) { menuIndex = 0; if mentionQuery != nil, files.isEmpty { loadFiles() } }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fieldHeight = $0 }
+            }
+            .frame(height: min(max(fieldHeight, 22), Self.maxFieldHeight))
+            .scrollBounceBehavior(.basedOnSize)
             }
 
             HStack(spacing: 8) {
@@ -142,6 +150,7 @@ struct Composer: View {
                     HStack(spacing: 8) {
                         if !m.images.isEmpty { Label("\(m.images.count)", systemImage: "photo").font(.caption).foregroundStyle(.secondary) }
                         Text(m.text.isEmpty ? "(image)" : m.text).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
+                            .help(String(m.text.prefix(1_500)))      // full text on hover; the row shows one line
                         Spacer(minLength: 8)
                         queueButton("bolt.fill", conversation.isRunning ? "Interrupt and send now" : "Send now") { conversation.sendQueuedNow(m.id) }
                         queueButton("pencil", "Edit in the input") { conversation.editQueued(m.id) }
