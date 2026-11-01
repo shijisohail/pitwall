@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+- Explained the macOS notice "“Pitwall” was prevented from modifying apps on your Mac" (README Troubleshooting, PRIVACY): it is App Management blocking a command Claude ran, which macOS attributes to Pitwall, and nothing was changed.
+
 ## [1.2.1] - 2026-11-01
 
 ### Added
