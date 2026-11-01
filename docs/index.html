@@ -35,7 +35,7 @@
   "description": "A free, open-source native macOS app for Claude Code: run many sessions in tabs, approve tool requests in one click, queue messages while Claude works, and see every change live.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "macOS 26 or later",
-  "softwareVersion": "1.2.0",
+  "softwareVersion": "1.2.1",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -143,7 +143,7 @@
   h2.sec { font-size: clamp(38px, 5vw, 56px); line-height: 1; max-width: 16em; }
   p.sub { color: var(--muted); max-width: 40em; margin: 14px 0 36px; }
 
-  /* New in 1.2 */
+  /* New in 1.2.1 */
   .new { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 56px; }
   .new ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
   .new li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: baseline; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
@@ -214,7 +214,7 @@
           <a class="btn primary" href="https://github.com/shijisohail/pitwall/releases/latest">Download for macOS</a>
           <a class="btn" href="https://github.com/shijisohail/pitwall">View source on GitHub</a>
         </div>
-        <p class="fine">Version 1.2.0. Needs macOS 26 or later and Claude Code. MIT license, no telemetry.</p>
+        <p class="fine">Version 1.2.1. Needs macOS 26 or later and Claude Code. MIT license, no telemetry.</p>
       </div>
 
       <div>
@@ -264,15 +264,16 @@
     <section id="whats-new">
       <div class="new">
         <div>
-          <h2 class="sec">New in 1.2</h2>
+          <h2 class="sec">New in 1.2.1</h2>
           <p class="sub">The latest release, shipped 1 November 2026.</p>
           <a class="btn" href="https://github.com/shijisohail/pitwall/blob/main/CHANGELOG.md">Read the changelog</a>
         </div>
         <ul>
-          <li><b>Agent view</b><span>Optional and off by default. Watch each subagent as a little bot that moves between Think, Read, Search, Edit and Run.</span></li>
-          <li><b>Real tables</b><span>Markdown tables in replies now render as tables, with alignment and wrapping, instead of raw pipes.</span></li>
-          <li><b>Fewer permission surprises</b><span>Settings explains the macOS folder prompts, with a shortcut to Full Disk Access. Builds you make yourself keep their permissions.</span></li>
-          <li><b>1.1</b><span>Message queue while Claude works, drag and drop, a real home screen and safer approvals.</span></li>
+          <li><b>Clickable files and links</b><span>File names in replies open the file, even a bare name listed under a folder the reply mentions. Web links work again.</span></li>
+          <li><b>A running indicator</b><span>A bar above the composer shows what Claude is doing right now, with a live timer.</span></li>
+          <li><b>Long prompts scroll</b><span>The prompt box grows with your text, then scrolls, so you can read the top of a long paste.</span></li>
+          <li><b>Cursor always ready</b><span>The composer takes focus back when you return, close a sheet or answer a request.</span></li>
+          <li><b>1.2</b><span>Optional Agent view, real markdown tables and clearer macOS permission handling.</span></li>
         </ul>
       </div>
     </section>

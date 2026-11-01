@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-01
+
 ### Added
 - A running indicator above the composer while a session is working: a pulsing dot, what Claude is doing right now ("Reading Composer.swift", "Run the tests", "Waiting for your approval"), a live timer, queued-message and agent counts, and a sweeping line. Amber while it waits for you.
 - File names in replies are clickable. A code span such as `reports/summary.pdf`, `src/App.swift:42` or `~/notes.md` that names a file or folder that exists (relative to the session's folder, or absolute) opens it; an app or script is revealed in Finder instead of launched. A bare file name that follows a mentioned folder ("Files are in `reports/`:" then the names) resolves inside that folder. Names that don't exist, and ordinary code, stay plain.
