@@ -87,13 +87,15 @@ let nativeCommands: [SlashCommand] = [
     ("help", "Browse every command and skill"),
     ("skills", "Browse every command and skill"),
     ("review", "Review the current diff (alias of /code-review)"),
+    ("btw", "Ask a quick side question without interrupting Claude (works while it is busy)"),
+    ("tasks", "Show the commands Claude is running in the background"),
     ("login", "Sign in (opens Terminal)"),
     ("logout", "Sign out (opens Terminal)"),
     ("doctor", "Run diagnostics (opens Terminal)"),
 ].map { SlashCommand(name: $0.0, description: $0.1, native: true) }
 
 private let terminalOnly: Set<String> = [
-    "rewind", "checkpoint", "undo", "btw", "tasks", "bashes", "ide", "desktop", "app", "theme", "vim",
+    "rewind", "checkpoint", "undo", "ide", "desktop", "app", "theme", "vim",
     "terminal-setup", "tui", "focus", "color", "statusline", "keybindings", "sandbox", "voice", "chrome",
     "remote-control", "rc", "teleport", "tp", "mobile", "ios", "android", "stickers", "radio", "powerup",
     "scroll-speed", "release-notes", "insights", "remote-env", "privacy-settings", "heapdump", "background",
@@ -127,6 +129,8 @@ extension Conversation {
         case "memory": store.sheet = .memory
         case "status": store.sheet = .status
         case "mcp": if args.isEmpty { store.sheet = .mcp } else { return .forward(text) }
+        case "btw": if args.isEmpty { note("Usage: /btw <question>. It is answered on the side, without interrupting Claude.") } else { askSide(args) }
+        case "tasks", "bashes": tasksExpanded = true; if tasks.isEmpty { note("No background commands are running.") }
         case "add-dir":
             let p = NSString(string: args).expandingTildeInPath
             var isDir: ObjCBool = false
@@ -172,18 +176,39 @@ extension Conversation {
 
     // MARK: Local shell (`!command`)
 
+    /// `!command`: run it now, beside whatever Claude is doing, with output streaming in, a Stop button, and `cd` carrying
+    /// over to the next one. The result is held back and sent to Claude as context with your next message.
     func runLocal(_ cmd: String) {
-        let b = Block(kind: .local, toolName: cmd)
-        let m = ChatMessage(role: .assistant, blocks: [b])
+        var block = Block(kind: .local, toolName: cmd)
+        block.live = true
+        let m = ChatMessage(role: .assistant, blocks: [block])
         messages.append(m)
-        let dir = cwd
-        Task { @MainActor [weak self] in
-            let (out, code) = await Shell.run(cmd, cwd: dir)
-            guard let self, let mi = self.messages.firstIndex(where: { $0.id == m.id }) else { return }
-            self.messages[mi].blocks[0].text = out.isEmpty ? "(no output)" : String(out.prefix(20_000))
-            self.messages[mi].blocks[0].isError = code != 0
-            self.queuedLocal.append("$ \(cmd)\n" + String(out.suffix(3_000)))
+        let mid = m.id
+        let shell = LiveShell()
+        runningShells[mid] = shell
+        shell.onOutput = { [weak self] text in self?.setLocalOutput(mid, text, live: true, failed: false) }
+        shell.onFinish = { [weak self] text, status, newCwd, stopped in
+            guard let self else { return }
+            self.runningShells[mid] = nil
+            if let d = newCwd, FileManager.default.fileExists(atPath: d) { self.shellCwd = d }
+            var shown = text.isEmpty ? (stopped ? "" : "(no output)") : text
+            if stopped { shown += (shown.isEmpty ? "" : "\n") + "[stopped]" }
+            self.setLocalOutput(mid, shown, live: false, failed: status != 0)
+            self.queuedLocal.append("$ \(cmd)\n" + String(text.suffix(3_000)))
         }
+        shell.start(cmd, cwd: shellCwd ?? cwd)
+    }
+
+    private func setLocalOutput(_ messageID: String, _ text: String, live: Bool, failed: Bool) {
+        guard let mi = messages.firstIndex(where: { $0.id == messageID }), !messages[mi].blocks.isEmpty else { return }
+        messages[mi].blocks[0].text = text
+        messages[mi].blocks[0].live = live ? true : nil
+        messages[mi].blocks[0].isError = failed
+    }
+
+    /// Stop every `!` command. Each stays registered until it reports back, so its card ends as "[stopped]".
+    func stopAllShells() {
+        for s in runningShells.values { s.stop() }
     }
 
     // MARK: Export / copy

@@ -35,6 +35,7 @@ struct SheetHost: View {
         case .status: StatusSheet()
         case .projects: ProjectsSheet()
         case .config(let tab): ConfigSheet(tab: tab)
+        case .viewer(let path): FileViewerSheet(path: path)
         }
     }
 }
@@ -223,7 +224,7 @@ struct MemorySheet: View {
                             HStack {
                                 Text(it.label).fontWeight(.semibold)
                                 Spacer()
-                                if text != nil { Button("Open") { FilePolicy.openOrReveal(it.path) }.buttonStyle(HTBSecondary()).controlSize(.small) }
+                                if text != nil { Button("Open") { Store.shared.openFile(it.path) }.buttonStyle(HTBSecondary()).controlSize(.small) }
                             }
                             Text(it.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                             if let text {
@@ -271,7 +272,7 @@ struct ConfigSheet: View {
                                 HStack {
                                     Text("\(label) settings").fontWeight(.semibold)
                                     Spacer()
-                                    Button("Open") { FilePolicy.openOrReveal(path) }.buttonStyle(HTBSecondary()).controlSize(.small)
+                                    Button("Open") { Store.shared.openFile(path) }.buttonStyle(HTBSecondary()).controlSize(.small)
                                 }
                                 Text(path.replacingOccurrences(of: NSHomeDirectory(), with: "~")).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                                 if shown.isEmpty { Text("Nothing set here").font(.caption).foregroundStyle(.tertiary) }

@@ -24,6 +24,7 @@ struct Block: Identifiable, Codable, Hashable {
     var result: String? = nil
     var isError = false
     var imageData: Data? = nil
+    var live: Bool? = nil          // a `!` command that is still running
 
     var input: [String: Any] {
         guard let d = inputJSON.data(using: .utf8),

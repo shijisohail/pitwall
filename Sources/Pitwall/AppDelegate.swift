@@ -23,7 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             a.addButton(withTitle: "Quit"); a.addButton(withTitle: "Cancel")
             if a.runModal() != .alertFirstButtonReturn { return .terminateCancel }
         }
-        store.conversations.forEach { $0.runner?.stop() }     // don't leave `claude` children running after quit
+        store.conversations.forEach { $0.stopAllShells(); $0.runner?.stop() }     // don't leave `claude` children running after quit
         return .terminateNow
     }
 }

@@ -39,14 +39,60 @@ struct MessageView: View {
                     case .tool: ToolCard(block: b, live: live)
                     case .notice: NoticeLine(text: b.text)
                     case .output: OutputCard(title: b.toolName, text: b.text)
-                    case .local: LocalCard(command: b.toolName, text: b.text, failed: b.isError)
+                    case .local: LocalCard(command: b.toolName, text: b.text, failed: b.isError, live: b.live == true, onStop: { Store.shared.stopLocalShell(messageID: message.id) })
                     case .image: EmptyView()
                     case .error: ErrorCard(text: b.text, cwd: cwd)
                     }
                 }
+                if !live, let md = message.replyMarkdown { CopyBar(markdown: md) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .contextMenu {
+                if let md = message.replyMarkdown {
+                    Button("Copy Reply") { CopyBar.put(RichText.plainText(md)) }
+                    Button("Copy Reply as Markdown") { CopyBar.put(md) }
+                }
+            }
         }
+    }
+}
+
+extension ChatMessage {
+    /// The reply's text as written (Markdown), or nil if it has none (a tool-only message).
+    var replyMarkdown: String? {
+        let t = blocks.filter { $0.kind == .text }.map(\.text).filter { !$0.isEmpty }.joined(separator: "\n\n")
+        return t.isEmpty ? nil : t
+    }
+}
+
+/// Copy for a finished reply. The button copies it as plain text, exactly what selecting it all would give (no Markdown
+/// symbols); the arrow offers the Markdown source, which pastes well into Notion, GitHub or Slack.
+struct CopyBar: View {
+    let markdown: String
+    @State private var copied = false
+
+    static func put(_ s: String) {
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(s, forType: .string)
+    }
+
+    var body: some View {
+        Menu {
+            Button("Copy as Markdown") { copy(markdown) }
+        } label: {
+            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc").font(.system(size: 11.5))
+        } primaryAction: {
+            copy(RichText.plainText(markdown))
+        }
+        .menuStyle(.borderlessButton).fixedSize()
+        .foregroundStyle(copied ? HTB.green : .secondary)
+        .help("Copy this reply. The arrow offers Markdown. To copy part of it, select the text.")
+        .accessibilityLabel("Copy reply")
+    }
+
+    private func copy(_ s: String) {
+        Self.put(s)
+        copied = true
+        Task { try? await Task.sleep(for: .seconds(1.4)); copied = false }
     }
 }
 
@@ -72,7 +118,7 @@ struct TaskNotificationRow: View {
                 if !note.detail.isEmpty { Text(note.detail).font(.system(size: 11.5, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1) }
                 Spacer(minLength: 8)
                 if let f = note.outputFile, FileManager.default.fileExists(atPath: f) {
-                    Button("Log") { FilePolicy.openOrReveal(f) }.buttonStyle(HTBSecondary()).controlSize(.small).help("Open the agent's output")
+                    Button("Log") { Store.shared.openFile(f) }.buttonStyle(HTBSecondary()).controlSize(.small).help("Open the agent's output")
                 }
                 Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(.tertiary).rotationEffect(.degrees(open ? 90 : 0))
             }
@@ -116,17 +162,22 @@ struct LocalCard: View {
     let command: String
     let text: String
     let failed: Bool
+    /// The command is still running: output streams in and it can be stopped.
+    var live = false
+    var onStop: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "chevron.right.2").foregroundStyle(.orange)
                 Text(command).font(.system(size: 12.5, design: .monospaced)).lineLimit(2)
                 Spacer()
-                if text.isEmpty { ProgressView().controlSize(.small) }
-                else { Image(systemName: failed ? "xmark.circle.fill" : "checkmark.circle.fill").foregroundStyle(failed ? .red : .green) }
+                if live {
+                    ProgressView().controlSize(.small)
+                    if let onStop { Button("Stop", action: onStop).buttonStyle(.plain).font(.system(size: 12, weight: .medium)).foregroundStyle(HTB.red) }
+                } else { Image(systemName: failed ? "xmark.circle.fill" : "checkmark.circle.fill").foregroundStyle(failed ? .red : .green) }
             }.padding(.horizontal, 14).padding(.vertical, 10)
             if !text.isEmpty {
-                OutputBox(text: text, tint: failed ? .red : nil)
+                OutputBox(text: text, tint: failed ? .red : nil, fromEnd: live)
                     .background(.black.opacity(0.26))
             }
         }

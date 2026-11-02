@@ -20,10 +20,11 @@ struct RecentProject: Identifiable {
 }
 
 enum SheetKind: Identifiable, Hashable {
-    case switcher, commands, mcp, memory, diff, status, projects, config(String)
+    case switcher, commands, mcp, memory, diff, status, projects, config(String), viewer(String)
     var id: String {
         switch self {
         case .config(let t): "config-\(t)"
+        case .viewer(let p): "viewer-\(p)"
         default: "\(self)"
         }
     }
@@ -282,6 +283,21 @@ final class Store {
     }
 
     /// Add a folder to the workspace and show it: its sessions on Pit Wall, or a fresh session if it has none.
+    /// A file Claude mentioned, changed or logged: shown in the built-in viewer, or in Finder if it is a folder or something
+    /// that must never be opened from here (apps, installers, executables). A path that no longer exists does nothing.
+    func openFile(_ path: String) {
+        switch FileViewing.kind(for: URL(fileURLWithPath: path)) {
+        case .missing: return
+        case .folder, .reveal: FilePolicy.openOrReveal(path)
+        default: sheet = .viewer(path)
+        }
+    }
+
+    /// Stop the `!` command shown by this message, in whichever session runs it.
+    func stopLocalShell(messageID: String) {
+        for c in conversations { c.runningShells[messageID]?.stop() }
+    }
+
     func openFolder(_ raw: String) {
         let path = (raw as NSString).standardizingPath
         if owner(ofPath: path) != path { workspace.append(path) }
