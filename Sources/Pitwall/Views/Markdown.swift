@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-private enum MD: Identifiable {
+enum MD: Identifiable {
     case para(Int, String), heading(Int, Int, String), bullet(Int, Int, String, String)
     case code(Int, String, String), quote(Int, String), rule(Int), table(Int, MarkdownTable)
 
@@ -13,7 +13,7 @@ private enum MD: Identifiable {
     }
 }
 
-private func parse(_ text: String) -> [MD] {
+func parse(_ text: String) -> [MD] {
     var out: [MD] = []
     var para: [String] = [], tbl: [String] = []
     var code: [String]? = nil
@@ -58,7 +58,7 @@ private func parse(_ text: String) -> [MD] {
 }
 
 /// Inline markdown. With a `cwd`, code spans and relative links that name an existing file or folder become clickable.
-private func inline(_ s: String, cwd: String? = nil, bases: [String] = []) -> AttributedString {
+func inline(_ s: String, cwd: String? = nil, bases: [String] = []) -> AttributedString {
     let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     let src = (try? AttributedString(markdown: s, options: opts)) ?? AttributedString(s)
     var a = src
@@ -80,56 +80,28 @@ private func inline(_ s: String, cwd: String? = nil, bases: [String] = []) -> At
     return a
 }
 
-/// A run of markdown text. Plain text can be selected, but SwiftUI's selectable `Text` swallows clicks, so a link in it
-/// is styled yet dead. Text that contains a link is therefore left non-selectable so the link opens (Copy is in its menu).
-private struct MDText: View {
-    let source: String
-    var cwd: String?
-    var bases: [String] = []
-    var font: Font?
-    var color: Color?
-
-    var body: some View {
-        let a = inline(source, cwd: cwd, bases: bases)
-        let t = Text(a).font(font).foregroundStyle(color ?? .primary).lineSpacing(3)
-        if a.runs.contains(where: { $0.link != nil }) {
-            t.contextMenu {
-                Button("Copy Text") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(String(a.characters), forType: .string) }
-            }
-        } else {
-            t.textSelection(.enabled)
-        }
-    }
-}
-
 struct MarkdownView: View {
     let text: String
     /// The session's folder, so file names in the text can be opened. Nil where there isn't one.
     var cwd: String?
+    /// Body text size. (Callers used to set `.font(.system(size:))` on the view; the text is drawn by AppKit now.)
+    var size: CGFloat = 13
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         let bases = cwd == nil ? [] : FileLinks.mentionedDirectories(in: text, cwd: cwd)
         VStack(alignment: .leading, spacing: 10) {
-            ForEach(parse(text)) { block in
-                switch block {
-                case .para(_, let s):
-                    MDText(source: s, cwd: cwd, bases: bases)
-                case .heading(_, let n, let s):
-                    MDText(source: s, cwd: cwd, bases: bases, font: .system(size: [0, 22, 19, 16, 15][n], weight: .semibold)).padding(.top, 4)
-                case .bullet(_, let indent, let marker, let s):
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(marker).foregroundStyle(.secondary).frame(minWidth: 14, alignment: .trailing)
-                        MDText(source: s, cwd: cwd, bases: bases)
-                    }.padding(.leading, CGFloat(indent) * 18)
-                case .quote(_, let s):
-                    MDText(source: s, cwd: cwd, bases: bases, color: .secondary).padding(.leading, 12)
-                        .overlay(alignment: .leading) { Capsule().fill(.secondary.opacity(0.5)).frame(width: 3) }
-                case .rule:
-                    Divider()
+            ForEach(MDRun.group(parse(text))) { run in
+                switch run {
+                case .text(_, let items):
+                    // One native text view per run: select across paragraphs, and links still open (see RichText.swift).
+                    RichTextView(attributed: RichText.build(items, size: size, cwd: cwd, bases: bases)) { openURL($0) }
                 case .code(_, let lang, let s):
                     CodeBlock(lang: lang, code: s).textSelection(.enabled)
                 case .table(_, let t):
                     TableView(table: t).textSelection(.enabled)
+                case .rule:
+                    Divider()
                 }
             }
         }

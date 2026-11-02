@@ -44,9 +44,55 @@ struct MessageView: View {
                     case .error: ErrorCard(text: b.text, cwd: cwd)
                     }
                 }
+                if !live, let md = message.replyMarkdown { CopyBar(markdown: md) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .contextMenu {
+                if let md = message.replyMarkdown {
+                    Button("Copy Reply") { CopyBar.put(RichText.plainText(md)) }
+                    Button("Copy Reply as Markdown") { CopyBar.put(md) }
+                }
+            }
         }
+    }
+}
+
+extension ChatMessage {
+    /// The reply's text as written (Markdown), or nil if it has none (a tool-only message).
+    var replyMarkdown: String? {
+        let t = blocks.filter { $0.kind == .text }.map(\.text).filter { !$0.isEmpty }.joined(separator: "\n\n")
+        return t.isEmpty ? nil : t
+    }
+}
+
+/// Copy for a finished reply. The button copies it as plain text, exactly what selecting it all would give (no Markdown
+/// symbols); the arrow offers the Markdown source, which pastes well into Notion, GitHub or Slack.
+struct CopyBar: View {
+    let markdown: String
+    @State private var copied = false
+
+    static func put(_ s: String) {
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(s, forType: .string)
+    }
+
+    var body: some View {
+        Menu {
+            Button("Copy as Markdown") { copy(markdown) }
+        } label: {
+            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc").font(.system(size: 11.5))
+        } primaryAction: {
+            copy(RichText.plainText(markdown))
+        }
+        .menuStyle(.borderlessButton).fixedSize()
+        .foregroundStyle(copied ? HTB.green : .secondary)
+        .help("Copy this reply. The arrow offers Markdown. To copy part of it, select the text.")
+        .accessibilityLabel("Copy reply")
+    }
+
+    private func copy(_ s: String) {
+        Self.put(s)
+        copied = true
+        Task { try? await Task.sleep(for: .seconds(1.4)); copied = false }
     }
 }
 

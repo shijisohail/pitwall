@@ -292,7 +292,7 @@ private struct AgentRow: View {
         if let r = run.report, !r.isEmpty {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Report").font(.system(size: 10.5, weight: .semibold)).foregroundStyle(.tertiary)
-                MarkdownView(text: String(r.prefix(3_000))).font(.system(size: 12))
+                MarkdownView(text: String(r.prefix(3_000)), size: 12)
             }
         }
     }

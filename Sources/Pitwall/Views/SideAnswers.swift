@@ -29,7 +29,7 @@ private struct SideAnswerRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(qa.question).font(.system(size: 12.5)).foregroundStyle(.secondary).lineLimit(2)
                 if let a = qa.answer {
-                    MarkdownView(text: a).font(.system(size: 13.5))
+                    MarkdownView(text: a, size: 13.5)
                 } else if let e = qa.error {
                     Text(e).font(.system(size: 12.5)).foregroundStyle(HTB.red)
                 } else {
