@@ -35,7 +35,7 @@
   "description": "A free, open-source native macOS app for Claude Code: run many sessions in tabs, approve tool requests in one click, queue messages while Claude works, and see every change live.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "macOS 26 or later",
-  "softwareVersion": "1.2.2",
+  "softwareVersion": "1.3.0",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -143,7 +143,7 @@
   h2.sec { font-size: clamp(38px, 5vw, 56px); line-height: 1; max-width: 16em; }
   p.sub { color: var(--muted); max-width: 40em; margin: 14px 0 36px; }
 
-  /* New in 1.2.2 */
+  /* New in 1.3.0 */
   .new { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 56px; }
   .new ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
   .new li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: baseline; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
@@ -214,7 +214,7 @@
           <a class="btn primary" href="https://github.com/shijisohail/pitwall/releases/latest">Download for macOS</a>
           <a class="btn" href="https://github.com/shijisohail/pitwall">View source on GitHub</a>
         </div>
-        <p class="fine">Version 1.2.2. Needs macOS 26 or later and Claude Code. MIT license, no telemetry.</p>
+        <p class="fine">Version 1.3.0. Needs macOS 26 or later and Claude Code. MIT license, no telemetry.</p>
       </div>
 
       <div>
@@ -264,15 +264,16 @@
     <section id="whats-new">
       <div class="new">
         <div>
-          <h2 class="sec">New in 1.2.2</h2>
+          <h2 class="sec">New in 1.3.0</h2>
           <p class="sub">The latest release, shipped 2 November 2026.</p>
           <a class="btn" href="https://github.com/shijisohail/pitwall/blob/main/CHANGELOG.md">Read the changelog</a>
         </div>
         <ul>
-          <li><b>Type anywhere</b><span>Click the transcript, select some text, then just type. Your keystrokes land in the prompt box, like a terminal, after any draft already there.</span></li>
-          <li><b>Highlighted keywords</b><span><code>ultrathink</code>, <code>ultracode</code>, <code>/commands</code> and <code>@files</code> light up as you type and in the message once sent.</span></li>
-          <li><b>Drafts stay safe</b><span>Coming back to the window no longer leaves your draft selected, so the next keystroke can't wipe it.</span></li>
-          <li><b>1.2.1</b><span>Clickable file names and links, a running indicator, scrollable long prompts and a cursor that is ready when you return.</span></li>
+          <li><b>Side questions</b><span>Type <code>/btw</code> and ask something while Claude is busy. The answer appears beside the chat, never interrupts the work and never joins the conversation.</span></li>
+          <li><b>Tasks you can see and stop</b><span>Background commands and Monitors get a Tasks bar with live output and Stop; <code>⌘B</code> moves a running command to the background. <code>!</code> shell commands stream live too.</span></li>
+          <li><b>A built-in file viewer</b><span>Click a file name in a reply to read it in Pitwall: Markdown rendered, code with line numbers, JSON, images, PDFs, and Office files via Quick Look.</span></li>
+          <li><b>Select and copy replies</b><span>Select across paragraphs and bullets, or press Copy under a reply for clean text, with Markdown one click away.</span></li>
+          <li><b>1.2.2</b><span>Type anywhere in a chat, highlighted prompt keywords, and drafts that stay safe when you come back.</span></li>
         </ul>
       </div>
     </section>

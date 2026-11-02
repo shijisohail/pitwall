@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-02
+
 ### Added
 - `/btw` side questions: answered on the side while Claude is busy, in a card above the prompt, never part of the conversation and never queued. Also works when nothing is running.
 - A **Tasks** bar for the shell commands Claude runs: background commands, Monitors, and a command Claude is waiting on. Each shows its status and time, live output, Stop, and, for a foreground command, "Run in background" (<kbd>⌘B</kbd>, as Ctrl+B in the terminal). `/tasks` opens it.
