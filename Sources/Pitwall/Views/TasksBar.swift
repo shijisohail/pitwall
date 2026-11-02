@@ -5,9 +5,15 @@ import SwiftUI
 struct TasksBar: View {
     @Bindable var conversation: Conversation
 
-    private var running: Int { conversation.runningTasks.count }
-    private var summary: String {
-        let done = conversation.tasks.count - running
+    /// A foreground command that finishes in a moment never needs the bar, so it appears after it has run this long.
+    private static let foregroundDelay: TimeInterval = 2
+
+    private func visible(at now: Date) -> [BackgroundTask] {
+        conversation.tasks.filter { $0.isBackgrounded || !$0.isRunning || now.timeIntervalSince($0.startedAt) >= Self.foregroundDelay }
+    }
+    private func summary(_ tasks: [BackgroundTask]) -> String {
+        let running = tasks.filter(\.isRunning).count
+        let done = tasks.count - running
         var p: [String] = []
         if running > 0 { p.append("\(running) running") }
         if done > 0 { p.append("\(done) finished") }
@@ -16,37 +22,42 @@ struct TasksBar: View {
 
     var body: some View {
         if !conversation.tasks.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                header
-                if conversation.tasksExpanded {
-                    Divider().opacity(0.4)
-                    VStack(spacing: 0) {
-                        ForEach(conversation.tasks) { t in
-                            TaskRow(conversation: conversation, task: t)
-                            if t.id != conversation.tasks.last?.id { Divider().opacity(0.25) }
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let tasks = visible(at: context.date)
+                if !tasks.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header(tasks)
+                        if conversation.tasksExpanded {
+                            Divider().opacity(0.4)
+                            VStack(spacing: 0) {
+                                ForEach(tasks) { t in
+                                    TaskRow(conversation: conversation, task: t)
+                                    if t.id != tasks.last?.id { Divider().opacity(0.25) }
+                                }
+                            }
                         }
                     }
+                    .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.white.opacity(0.14)))
                 }
             }
-            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.white.opacity(0.14)))
             .transition(.opacity)
         }
     }
 
-    private var header: some View {
+    private func header(_ tasks: [BackgroundTask]) -> some View {
         HStack(spacing: 10) {
             Button { withAnimation(.easeOut(duration: 0.15)) { conversation.tasksExpanded.toggle() } } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "terminal").foregroundStyle(running > 0 ? HTB.green : .secondary)
+                    Image(systemName: "terminal").foregroundStyle(tasks.contains { $0.isRunning } ? HTB.green : .secondary)
                     Text("Tasks").font(.system(size: 12.5, weight: .semibold))
-                    Text(summary).font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(summary(tasks)).font(.system(size: 12)).foregroundStyle(.secondary)
                     Image(systemName: conversation.tasksExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .bold)).foregroundStyle(.tertiary)
                     Spacer(minLength: 0)
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain)
-            if !conversation.foregroundTasks.isEmpty {
+            if tasks.contains(where: \.canBackground) {
                 Button("Run in background") { conversation.backgroundForeground() }
                     .buttonStyle(HTBSecondary()).controlSize(.small).help("Let Claude carry on while this command keeps running (⌘B)")
             }

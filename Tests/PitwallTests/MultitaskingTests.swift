@@ -48,10 +48,10 @@ import Foundation
     @Test func onlyTheNewestFinishedTasksAreKept() {
         let c = Conversation(cwd: "/tmp")
         for i in 0..<10 {
-            started(c, "t\(i)")
+            started(c, "t\(i)", backgrounded: true)
             c.handle(ev("task_notification", ["task_id": "t\(i)", "status": "completed"]))
         }
-        started(c, "live")
+        started(c, "live", backgrounded: true)
         #expect(c.tasks.filter { !$0.isRunning }.count == Conversation.finishedTasksKept)
         #expect(c.tasks.contains { $0.id == "live" } && c.tasks.contains { $0.id == "t9" } && !c.tasks.contains { $0.id == "t0" })
     }
@@ -59,7 +59,20 @@ import Foundation
     @Test func whenTheProcessIsGoneEveryTaskHasEnded() {
         let c = Conversation(cwd: "/tmp"); started(c, "a"); started(c, "b", backgrounded: true)
         c.endAllTasks()
-        #expect(c.runningTasks.isEmpty && c.tasks.allSatisfy { $0.status == .stopped })
+        #expect(c.runningTasks.isEmpty)
+        #expect(c.tasks.map(\.id) == ["b"] && c.tasks[0].status == .stopped)       // the foreground one just leaves; its tool card remains
+    }
+
+    @Test func aForegroundCommandThatFinishesLeavesTheListButABackgroundOneStays() {
+        let c = Conversation(cwd: "/tmp")
+        started(c, "fg"); started(c, "bg", backgrounded: true)
+        c.handle(ev("task_notification", ["task_id": "fg", "status": "completed"]))
+        c.handle(ev("task_notification", ["task_id": "bg", "status": "completed", "output_file": "/tmp/bg.output"]))
+        #expect(c.tasks.map(\.id) == ["bg"] && c.tasks[0].status == .completed && c.tasks[0].outputFile == "/tmp/bg.output")
+        started(c, "moved")                                                                  // a foreground command moved to the background first...
+        c.handle(ev("task_updated", ["task_id": "moved", "patch": ["is_backgrounded": true]]))
+        c.handle(ev("task_updated", ["task_id": "moved", "patch": ["status": "killed"]]))
+        #expect(c.tasks.contains { $0.id == "moved" && $0.status == .stopped })               // ...stays once it ends
     }
 
     @Test func aFinishedTasksLogIsReadFromItsFile() {

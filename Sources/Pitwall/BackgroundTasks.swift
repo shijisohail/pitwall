@@ -61,25 +61,19 @@ extension Conversation {
             guard let id = e["task_id"] as? String, let i = tasks.firstIndex(where: { $0.id == id }),
                   let patch = e["patch"] as? [String: Any] else { return }
             if let b = patch["is_backgrounded"] as? Bool { tasks[i].isBackgrounded = b }
-            if let s = BackgroundTask.status(forCLI: patch["status"] as? String) {
-                tasks[i].status = s
-                if s != .running { tasks[i].endedAt = Self.date(fromMillis: patch["end_time"]) ?? Date() }
+            if let s = BackgroundTask.status(forCLI: patch["status"] as? String), s != .running {
+                settle(id, s, at: Self.date(fromMillis: patch["end_time"]) ?? Date())
             }
             pruneTasks()
         case "task_notification":
             guard let id = e["task_id"] as? String, let i = tasks.firstIndex(where: { $0.id == id }) else { return }
-            if let s = BackgroundTask.status(forCLI: e["status"] as? String), s != .running {
-                tasks[i].status = s
-                if tasks[i].endedAt == nil { tasks[i].endedAt = Date() }
-            }
             if let f = e["output_file"] as? String, !f.isEmpty { tasks[i].outputFile = f }
+            if let s = BackgroundTask.status(forCLI: e["status"] as? String), s != .running { settle(id, s, at: Date()) }
             pruneTasks()
         case "background_tasks_changed":
             // The CLI's list of live *backgrounded* tasks. One we think is backgrounded but that has left the list has ended.
             let live = Set((e["tasks"] as? [[String: Any]] ?? []).compactMap { $0["task_id"] as? String })
-            for i in tasks.indices where tasks[i].isRunning && tasks[i].isBackgrounded && !live.contains(tasks[i].id) {
-                tasks[i].status = .completed; tasks[i].endedAt = Date()
-            }
+            for t in tasks where t.isRunning && t.isBackgrounded && !live.contains(t.id) { settle(t.id, .completed, at: Date()) }
             pruneTasks()
         default: break
         }
@@ -88,6 +82,15 @@ extension Conversation {
     private static func date(fromMillis v: Any?) -> Date? {
         guard let ms = (v as? Double) ?? (v as? Int).map(Double.init), ms > 0 else { return nil }
         return Date(timeIntervalSince1970: ms / 1000)
+    }
+
+    /// A task ended. One that ran in the foreground already shows as a tool card with its result, so it leaves the list;
+    /// a background command or Monitor stays, finished, so its log can still be opened.
+    private func settle(_ id: String, _ status: BackgroundTask.Status, at date: Date) {
+        guard let i = tasks.firstIndex(where: { $0.id == id }) else { return }
+        tasks[i].status = status
+        if tasks[i].endedAt == nil { tasks[i].endedAt = date }
+        if !tasks[i].isBackgrounded { tasks.remove(at: i) }
     }
 
     private func pruneTasks() {
@@ -101,7 +104,7 @@ extension Conversation {
 
     /// The process is gone, and so is everything it was running.
     func endAllTasks() {
-        for i in tasks.indices where tasks[i].isRunning { tasks[i].status = .stopped; tasks[i].endedAt = Date() }
+        for t in tasks where t.isRunning { settle(t.id, .stopped, at: Date()) }
     }
 
     var runningTasks: [BackgroundTask] { tasks.filter(\.isRunning) }

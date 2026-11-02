@@ -43,6 +43,10 @@ struct ChatView: View {
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: scrollToken) { proxy.scrollTo("bottom", anchor: .bottom) }
                 .onChange(of: conversation.loadState) { proxy.scrollTo("bottom", anchor: .bottom) }
+                // The area under the chat grows when a task or a side answer appears or the Tasks bar opens: keep the end in view.
+                .onChange(of: conversation.tasks.count) { proxy.scrollTo("bottom", anchor: .bottom) }
+                .onChange(of: conversation.tasksExpanded) { proxy.scrollTo("bottom", anchor: .bottom) }
+                .onChange(of: conversation.sideQA.count) { proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(spacing: 10) {
@@ -54,7 +58,14 @@ struct ChatView: View {
                     ApprovalStack(conversation: conversation)
                     Composer(conversation: conversation)
                 }
-                .frame(maxWidth: 760).padding(.horizontal, 26).padding(.bottom, 16).frame(maxWidth: .infinity)
+                .frame(maxWidth: 760).padding(.horizontal, 26).padding(.bottom, 16).padding(.top, 24).frame(maxWidth: .infinity)
+                // Solid, so the transcript scrolling underneath never shows through the bars and the prompt box.
+                .background(alignment: .top) {
+                    VStack(spacing: 0) {
+                        LinearGradient(colors: [HTB.bg.opacity(0), HTB.bg], startPoint: .top, endPoint: .bottom).frame(height: 24)
+                        HTB.bg
+                    }
+                }
             }
         }
         .frame(minWidth: 480)
