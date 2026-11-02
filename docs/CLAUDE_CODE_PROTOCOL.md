@@ -56,6 +56,48 @@ Terminal-UI-only commands (`/resume`, `/permissions`, `/memory`, `/status`, `/ad
 - `result.modelUsage.<model>.contextWindow` gives the context size.
 - Slash-command-only turns produce a `result` with text but no `assistant` event.
 
+## Multitasking: side questions, background tasks, Monitor, `!` shell
+
+Verified live against **Claude Code 2.1.316**, 2026-11-02, by driving a real `claude -p --input-format stream-json` session (a scripted client that sent control requests while a turn was running).
+
+### Side questions (`/btw`)
+
+`/btw` is declared `immediate` with `thinClientDispatch: "control-request"`, i.e. the CLI expects a thin client to send a control request, not text.
+
+- Request: `{"subtype":"side_question","question":"…","history":[{"question":"…","response":"…"}]}`. `history` is the earlier side Q&As, all strings; send `[]` the first time.
+- Preceded by `system/control_request_progress`, then `control_response` → `{"response":"<answer>","synthetic":false}`.
+- **Works while a turn is running.** Sent mid-turn it was answered 1.8 s later, before the main turn's `result`. It produced no `assistant` or `result` event, so it never touches the main transcript.
+- Not verified: whether the answer can use the main conversation's context.
+
+### Background tasks
+
+A shell command that is running (foreground or background) is a *task*. Events (`system`):
+
+| subtype | fields |
+|---|---|
+| `task_started` | `task_id`, `run_id`, `tool_use_id`, `description`, `is_backgrounded`, `task_type` (`local_bash` or `local_agent`) |
+| `task_updated` | `task_id`, `run_id`, `patch`: `{is_backgrounded:true}` or `{status:"killed"\|"completed", end_time}` |
+| `task_notification` | `task_id`, `run_id`, `tool_use_id`, `status` (`stopped`, `completed`), `output_file`, `summary` |
+| `background_tasks_changed` | `tasks`: the live list (`task_id`, `run_id`, `task_type`, `description`), empty when none |
+
+Control requests, all working in `-p` mode:
+
+| subtype | args | response |
+|---|---|---|
+| `background_tasks` | `tool_use_id` of the running Bash call | `{"backgrounded":true}`. This is Ctrl+B. The model's tool result becomes "Command was manually backgrounded by user with ID …. Output is being written to: <file>" and the turn carries on. |
+| `get_task_output` | `task_id` | `{"output","total_bytes","truncated"}`, live partial output |
+| `stop_task` | `task_id` | `{}`, then `task_updated {status:"killed"}`, `task_notification {status:"stopped"}`, empty `background_tasks_changed` |
+
+Output also lands in `<claude tmp>/<session id>/tasks/<task_id>.output`. The CLI refuses a bare long `sleep` in the foreground and the model re-runs it with `run_in_background`.
+
+### Monitor
+
+`Monitor` is a deferred tool (the model fetches it with `ToolSearch`). It starts a background `local_bash` task (`is_backgrounded:true`) that expires after about a minute unless its source ends first. **Every stdout line becomes a notification that starts an autonomous model turn**: `assistant` and `result` events arrive with no user message. The task ends with `task_updated {status:"completed"}` and a `task_notification`.
+
+### `!` shell in the terminal UI
+
+Not available headlessly. The terminal records it as two user messages, `<bash-input> cmd</bash-input>` then `<bash-stdout>…</bash-stdout><bash-stderr>…</bash-stderr>`, and starts no model turn. Pitwall's own `runLocal` stands in for it.
+
 ## On-disk history
 
 `~/.claude/projects/<cwd with "/" and "." replaced by "-">/<sessionId>.jsonl`, one record per content block (merge blocks sharing `message.id`). Title records: `custom-title` (set by `/rename`) beats `ai-title`. The first user record carries `cwd`, `gitBranch` and `entrypoint` (`cli`, `sdk-cli`, `claude-desktop`). `~/.claude/history.jsonl` lists every typed prompt with project and session.

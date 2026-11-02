@@ -43,6 +43,15 @@ final class Conversation: Identifiable {
     @ObservationIgnored var agentSlots: [String: Int] = [:]
     @ObservationIgnored var agentFinishCount = 0
 
+    /// Shell commands Claude Code is running for this session (see BackgroundTasks.swift).
+    var tasks: [BackgroundTask] = []
+    var tasksExpanded = false
+    /// `/btw` questions and answers, shown beside the chat, never part of the transcript.
+    var sideQA: [SideQA] = []
+    /// `!` commands running right now, by the id of the message that shows them, and the folder `cd` last left them in.
+    @ObservationIgnored var runningShells: [String: LiveShell] = [:]
+    @ObservationIgnored var shellCwd: String?
+
     @ObservationIgnored var runner: ClaudeRunner?
     @ObservationIgnored var blockMap: [Int: Int] = [:]
     @ObservationIgnored weak var store: Store?
@@ -248,13 +257,14 @@ final class Conversation: Identifiable {
         stop()
     }
 
-    private func startRunner() throws {
+    func startRunner() throws {
         let r = ClaudeRunner()
         r.onEvent = { [weak self] e in self?.handle(e) }
         r.onExit = { [weak self] code, err in
             guard let self else { return }
             let was = self.isRunning
             self.runner = nil; self.isRunning = false; self.turnStart = nil; self.approvals.removeAll()
+            self.endAllTasks()
             self.resyncTail()
             if was { self.fail(code == 0 ? "Claude exited unexpectedly." : "Claude exited (\(code)). \(err)") }
         }
@@ -272,11 +282,18 @@ final class Conversation: Identifiable {
         }
     }
 
-    func teardown() { runner?.stop(); runner = nil; stopTail(); isRunning = false }
+    func teardown() { runner?.stop(); runner = nil; stopTail(); isRunning = false; endAllTasks(); stopAllShells() }
 
     func fail(_ msg: String) {
         messages.append(ChatMessage(role: .assistant, blocks: [Block(kind: .error, text: msg)]))
         isRunning = false; turnStart = nil
+    }
+
+    /// Claude started a turn nobody asked for: a Monitor line, a finished background task, a scheduled task. Show it as
+    /// running (so messages typed meanwhile queue instead of colliding) and say why the reply appeared.
+    func beginAutonomousTurn() {
+        isRunning = true; turnStart = Date(); turnID += 1; stopRequested = false
+        note("Background activity started a new turn")
     }
 
     func note(_ text: String) {
@@ -355,6 +372,7 @@ final class Conversation: Identifiable {
 
     func handle(_ e: [String: Any]) {
         trackAgents(e)
+        trackTasks(e)
         let parent = e["parent_tool_use_id"]
         let isSub = parent != nil && !(parent is NSNull)
         switch e["type"] as? String {
@@ -420,6 +438,7 @@ final class Conversation: Identifiable {
         switch ev["type"] as? String {
         case "message_start":
             let m = ev["message"] as? [String: Any]
+            if !isRunning, runner != nil { beginAutonomousTurn() }
             turnHadAssistant = true; retryNote = nil
             messages.append(ChatMessage(role: .assistant, apiID: m?["id"] as? String))
             blockMap = [:]

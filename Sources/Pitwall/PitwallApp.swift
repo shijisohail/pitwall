@@ -31,6 +31,13 @@ struct PitwallApp: App {
                 Button("Search All Sessions…") { store.sheet = .switcher }.keyboardShortcut("k")
                 Button("Open in Terminal") { store.current?.openInTerminal() }.keyboardShortcut("t", modifiers: [.command, .shift])
                 Button("Stop Response") { store.current?.stop() }.keyboardShortcut(".")
+                Button("Run in Background") { store.current?.backgroundForeground() }.keyboardShortcut("b")
+                Divider()
+                Button("View File…") {
+                    let p = NSOpenPanel(); p.canChooseFiles = true; p.canChooseDirectories = false; p.allowsMultipleSelection = false
+                    if let d = store.current?.cwd { p.directoryURL = URL(fileURLWithPath: d) }
+                    if p.runModal() == .OK, let u = p.url { store.openFile(u.path) }
+                }.keyboardShortcut("o", modifiers: [.command, .shift])
             }
             CommandGroup(replacing: .saveItem) {
                 Button("Close Tab") { store.closeCurrentTab() }.keyboardShortcut("w")

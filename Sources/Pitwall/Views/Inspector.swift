@@ -91,7 +91,7 @@ struct InspectorView: View {
                         Text("+\(f.added)").foregroundStyle(.green); Text("−\(f.removed)").foregroundStyle(.red)
                     }.font(.system(size: 12, design: .monospaced)).contentShape(Rectangle())
                 }.buttonStyle(.plain)
-                Button { FilePolicy.openOrReveal(f.path) } label: { Image(systemName: "arrow.up.right.square") }
+                Button { Store.shared.openFile(f.path) } label: { Image(systemName: "arrow.up.right.square") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("Open file")
                 Button { revert(f) } label: { Image(systemName: "arrow.uturn.backward") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("Revert with git checkout").disabled(isReverted)
@@ -192,7 +192,7 @@ struct InspectorView: View {
             empty("No files touched yet", "Files Claude reads, searches or edits are listed here.")
         } else {
             ForEach(touched, id: \.0) { path, ops in
-                Button { FilePolicy.openOrReveal(path) } label: {
+                Button { Store.shared.openFile(path) } label: {
                     HStack(spacing: 10) {
                         Image(systemName: ops.contains("Edit") || ops.contains("Write") ? "pencil.line" : "doc.text")
                             .foregroundStyle(ops.contains("Edit") || ops.contains("Write") ? HTB.green : HTB.cyan).frame(width: 18)

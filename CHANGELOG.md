@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `/btw` side questions: answered on the side while Claude is busy, in a card above the prompt, never part of the conversation and never queued. Also works when nothing is running.
+- A **Tasks** bar for the shell commands Claude runs: background commands, Monitors, and a command Claude is waiting on. Each shows its status and time, live output, Stop, and, for a foreground command, "Run in background" (<kbd>⌘B</kbd>, as Ctrl+B in the terminal). `/tasks` opens it.
+- When Claude starts a turn nobody asked for (a Monitor line, a finished background task) it now shows as running with a "Background activity" note, and messages you type meanwhile queue instead of colliding with it.
+- `!` shell commands stream their output live, can be stopped (the whole process tree), no longer wait for the command to finish before showing anything, and `cd` carries over to the next command.
+- A built-in file viewer. File names in replies, the Files and Changes tabs, memory files and logs open in Pitwall: Markdown rendered (with a Source toggle and Back for linked files), code and text with line numbers, JSON pretty-printed, images, PDFs, and Office files, audio and video via Quick Look. Open, Reveal and Copy Path are in its header; <kbd>⇧⌘O</kbd> views any file. It is read-only; apps, installers and executables are only revealed in Finder, never opened.
+
 ## [1.2.2] - 2026-11-02
 
 ### Added

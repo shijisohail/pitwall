@@ -120,15 +120,20 @@ struct ToolCard: View {
 struct OutputBox: View {
     let text: String
     let tint: Color?
+    /// Show the last lines instead of the first (a command that is still producing output).
+    var fromEnd = false
     private static let maxLines = 30
 
     var body: some View {
         let lines = text.components(separatedBy: "\n")
-        let shown = lines.prefix(Self.maxLines).joined(separator: "\n")
+        let shown = (fromEnd ? lines.suffix(Self.maxLines) : lines.prefix(Self.maxLines)).joined(separator: "\n")
         VStack(alignment: .leading, spacing: 4) {
+            if fromEnd, lines.count > Self.maxLines {
+                Text("… \(lines.count - Self.maxLines) earlier lines").font(.caption).foregroundStyle(.tertiary)
+            }
             Text(shown).font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(tint ?? .secondary).textSelection(.enabled)
-            if lines.count > Self.maxLines {
+            if !fromEnd, lines.count > Self.maxLines {
                 Text("… \(lines.count - Self.maxLines) more lines").font(.caption).foregroundStyle(.tertiary)
             }
         }
