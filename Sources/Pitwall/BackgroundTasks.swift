@@ -125,7 +125,7 @@ extension Conversation {
         } else { completion(nil) }
     }
 
-    static func tail(ofFile path: String, maxBytes: Int = 20_000) -> String? {
+    nonisolated static func tail(ofFile path: String, maxBytes: Int = 20_000) -> String? {
         guard let h = FileHandle(forReadingAtPath: path) else { return nil }
         defer { try? h.close() }
         let size = (try? h.seekToEnd()) ?? 0
@@ -137,7 +137,7 @@ extension Conversation {
     // MARK: /btw
 
     /// `/btw what's the ETA?` → "what's the ETA?". A bare `/btw` → "". Anything else → nil.
-    static func sideQuestion(in text: String) -> String? {
+    nonisolated static func sideQuestion(in text: String) -> String? {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard t.lowercased() == "/btw" || t.lowercased().hasPrefix("/btw ") || t.lowercased().hasPrefix("/btw\n") else { return nil }
         return String(t.dropFirst(4)).trimmingCharacters(in: .whitespacesAndNewlines)
