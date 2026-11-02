@@ -24,7 +24,7 @@ struct RootView: View {
         .sheet(item: $store.sheet) { SheetHost(kind: $0) }
         .environment(\.openURL, OpenURLAction { url in
             // A file named in a reply: open it, or reveal it if it is an app or script (never launch it).
-            if url.scheme == FileLinks.scheme { MainActor.assumeIsolated { FilePolicy.openOrReveal(url.path) }; return .handled }
+            if url.scheme == FileLinks.scheme { MainActor.assumeIsolated { store.openFile(url.path) }; return .handled }
             return LinkPolicy.allows(url) ? .systemAction : .discarded
         })
         .task { await store.checkCLI() }

@@ -64,6 +64,7 @@ func withTempDirAsync<T>(_ body: (URL) async throws -> T) async rethrows -> T {
 /// A stand-in for `claude -p --input-format stream-json …` that speaks the real wire protocol
 /// (see docs/CLAUDE_CODE_PROTOCOL.md). Behaviour is chosen by the prompt text:
 ///   "approve" → asks for tool approval and reports the verdict · "hang" → waits for an interrupt · otherwise → replies.
+/// Control requests it answers: initialize, interrupt, side_question, background_tasks, get_task_output, stop_task.
 let fakeClaudeScript = #"""
 #!/bin/bash
 emit() { printf '%s\n' "$1"; }
@@ -76,6 +77,17 @@ while IFS= read -r line; do
     *'"subtype":"interrupt"'*)
       emit '{"type":"control_response","response":{"subtype":"success","request_id":"'"$rid"'","response":{}}}'
       emit '{"type":"result","subtype":"error_during_execution","is_error":true,"session_id":"'"$sid"'"}' ;;
+    *'"subtype":"side_question"'*)
+      emit '{"type":"control_response","response":{"subtype":"success","request_id":"'"$rid"'","response":{"response":"side answer","synthetic":false}}}' ;;
+    *'"subtype":"background_tasks"'*)
+      emit '{"type":"system","subtype":"task_updated","task_id":"t1","run_id":"r1","patch":{"is_backgrounded":true}}'
+      emit '{"type":"control_response","response":{"subtype":"success","request_id":"'"$rid"'","response":{"backgrounded":true}}}' ;;
+    *'"subtype":"get_task_output"'*)
+      emit '{"type":"control_response","response":{"subtype":"success","request_id":"'"$rid"'","response":{"output":"tick 1\ntick 2\n","total_bytes":14,"truncated":false}}}' ;;
+    *'"subtype":"stop_task"'*)
+      emit '{"type":"system","subtype":"task_updated","task_id":"t1","run_id":"r1","patch":{"status":"killed","end_time":1793583301079}}'
+      emit '{"type":"system","subtype":"task_notification","task_id":"t1","run_id":"r1","tool_use_id":"toolu_1","status":"stopped","output_file":"/tmp/t1.output","summary":"x"}'
+      emit '{"type":"control_response","response":{"subtype":"success","request_id":"'"$rid"'","response":{}}}' ;;
     *'"type":"user"'*)
       emit '{"type":"system","subtype":"init","session_id":"'"$sid"'","model":"fake-model"}'
       case "$line" in

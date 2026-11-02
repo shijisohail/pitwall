@@ -170,4 +170,83 @@ import Foundation
         #expect(!c.enqueue("   \n "))
         #expect(c.queue.isEmpty)
     }
+
+    // MARK: Multitasking (side questions, background tasks, autonomous turns)
+
+    private func startTask(_ c: Conversation, backgrounded: Bool = false) {
+        c.handle(["type": "system", "subtype": "task_started", "task_id": "t1", "run_id": "r1", "tool_use_id": "toolu_1",
+                  "description": "npm test", "is_backgrounded": backgrounded, "task_type": "local_bash"])
+    }
+
+    @Test func aSideQuestionIsAnsweredWhileATurnIsRunning() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            c.send("hang please")                                   // the fake never finishes this turn
+            #expect(c.isRunning)
+            c.askSide("quick question")
+            #expect(await waitUntil { c.sideQA.first?.answer == "side answer" })
+            #expect(c.isRunning)                                    // the main turn was not interrupted
+            #expect(!c.messages.contains { $0.blocks.contains { $0.text.contains("side answer") } })   // and the answer is not in the transcript
+            c.askSide("second one")
+            #expect(await waitUntil { c.sideQA.count == 2 && c.sideQA[1].answer == "side answer" })
+            c.teardown()
+        }
+    }
+
+    @Test func aSideQuestionStartsTheCLIIfNothingIsRunning() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            #expect(c.runner == nil)
+            c.askSide("anything?")
+            #expect(await waitUntil { c.sideQA.first?.answer == "side answer" })
+            #expect(!c.isRunning)
+            c.teardown()
+        }
+    }
+
+    @Test func movingARunningCommandToTheBackgroundRoundTrips() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            c.send("hi"); #expect(await waitUntil { !c.isRunning })
+            startTask(c)
+            #expect(c.foregroundTasks.count == 1)
+            c.backgroundForeground()
+            #expect(await waitUntil { c.tasks.first?.isBackgrounded == true })
+            #expect(c.foregroundTasks.isEmpty)
+            c.teardown()
+        }
+    }
+
+    @Test func stoppingATaskAndReadingItsOutputRoundTrip() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            c.send("hi"); #expect(await waitUntil { !c.isRunning })
+            startTask(c, backgrounded: true)
+            var seen: String?
+            c.taskOutput(c.tasks[0]) { seen = $0 }
+            #expect(await waitUntil { seen != nil })
+            #expect(seen == "tick 1\ntick 2\n")
+            c.stopTask("t1")
+            #expect(await waitUntil { c.tasks.first?.status == .stopped })
+            #expect(c.tasks[0].outputFile == "/tmp/t1.output")
+            #expect(c.runningTasks.isEmpty)
+            c.teardown()
+        }
+    }
+
+    @Test func aTurnNobodyAskedForShowsAsRunningAndEndsWithItsResult() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            c.send("hi"); #expect(await waitUntil { !c.isRunning })
+            // A Monitor line wakes Claude: stream events arrive with no user message.
+            c.handle(["type": "stream_event", "event": ["type": "message_start", "message": ["id": "m2"]]])
+            #expect(c.isRunning)
+            #expect(c.turnStart != nil)
+            #expect(c.messages.contains { $0.blocks.contains { $0.kind == .notice && $0.text.contains("Background activity") } })
+            #expect(c.enqueue("typed meanwhile"))                   // the composer queues while it runs
+            c.handle(["type": "result", "subtype": "success", "is_error": false, "result": "ok", "session_id": "fake-session-1"])
+            #expect(await waitUntil { !c.isRunning && c.queue.isEmpty })       // and the queued message goes out afterwards
+            c.teardown()
+        }
+    }
 }

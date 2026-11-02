@@ -301,6 +301,11 @@ struct Composer: View {
 
     private func send() {
         guard canSend else { return }
+        // `/btw` is answered on the side, right now, even while Claude is working: it is never queued.
+        if let question = Conversation.sideQuestion(in: text) {
+            if !question.isEmpty { conversation.askSide(question); text = ""; histIndex = nil }
+            return
+        }
         if conversation.isRunning {         // Claude is working: line it up for when the turn ends
             if conversation.enqueue(text, images: images) { text = ""; conversation.draftImages = []; histIndex = nil }
             return
