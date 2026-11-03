@@ -281,6 +281,7 @@ final class Conversation: Identifiable {
         o.permission = permission; o.effort = effort
         o.resume = forkFrom ?? sessionID; o.fork = forkFrom != nil; o.addDirs = additionalDirs
         if permission == .bypassPermissions { o.extraArgs = ["--allow-dangerously-skip-permissions"] }
+        if AppSettings.shared.claudeInChrome { o.extraArgs.append("--chrome") }
         try r.start(o)
         runner = r; forkFrom = nil
         stopTail()

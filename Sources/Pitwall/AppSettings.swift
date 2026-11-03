@@ -43,6 +43,10 @@ final class AppSettings {
     /// A short sound when a session finishes its turn, so you can look away while it works. On by default.
     var soundOnFinish: Bool { didSet { defaults.set(soundOnFinish, forKey: "soundOnFinish") } }
 
+    /// Launch sessions with `--chrome` so the Claude in Chrome tools load (needs the Chrome extension). Opt-in: it adds
+    /// browser tools to every session. Takes effect the next time a session's `claude` process starts.
+    var claudeInChrome: Bool { didSet { defaults.set(claudeInChrome, forKey: "claudeInChrome") } }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let stored = PermissionMode(rawValue: defaults.string(forKey: "defaultPermission") ?? "") ?? .acceptEdits
@@ -55,6 +59,7 @@ final class AppSettings {
         glassiness = min(1, max(0, defaults.object(forKey: "glassiness") as? Double ?? 0.25))
         notchFullScreen = defaults.object(forKey: "notchFullScreen") as? Bool ?? false
         showAgents = defaults.object(forKey: "showAgents") as? Bool ?? false
+        claudeInChrome = defaults.object(forKey: "claudeInChrome") as? Bool ?? false
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
 }

@@ -46,6 +46,11 @@ struct SettingsView: View {
                 Text("Off by default. When on, the inspector gets an Agents tab showing every subagent Claude spawns as a little bot, what each one is doing, and how many there are. Turning it off hides the tab and stops tracking. You can also switch it from a session's … menu.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Browser") {
+                Toggle("Claude in Chrome", isOn: $settings.claudeInChrome)
+                Text("Off by default. Starts sessions with --chrome so Claude can drive your Chrome (needs the Claude in Chrome extension, signed in to the same account). Applies to sessions started or restarted after you turn it on.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Appearance") {
                 LabeledContent("Glassiness") {
                     HStack(spacing: 8) {
