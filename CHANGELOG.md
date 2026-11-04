@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- New sessions get a generated name, as in the terminal. The first prompt stands in until the first reply finishes, then Pitwall asks the CLI for a title (a bare `/rename`) and it is saved in the session's transcript.
+
 ### Fixed
 - A narrow table in a reply now hugs its columns. Before, its border and background stretched across the whole chat width and left an empty bordered area to the right.
 

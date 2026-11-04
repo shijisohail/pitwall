@@ -63,7 +63,7 @@ func withTempDirAsync<T>(_ body: (URL) async throws -> T) async rethrows -> T {
 
 /// A stand-in for `claude -p --input-format stream-json …` that speaks the real wire protocol
 /// (see docs/CLAUDE_CODE_PROTOCOL.md). Behaviour is chosen by the prompt text:
-///   "approve" → asks for tool approval and reports the verdict · "hang" → waits for an interrupt · otherwise → replies.
+///   "approve" → asks for tool approval and reports the verdict · "hang" → waits for an interrupt · "/rename" → retitles the session, no turn · otherwise → replies.
 /// Control requests it answers: initialize, interrupt, side_question, background_tasks, get_task_output, stop_task.
 let fakeClaudeScript = #"""
 #!/bin/bash
@@ -91,6 +91,9 @@ while IFS= read -r line; do
     *'"type":"user"'*)
       emit '{"type":"system","subtype":"init","session_id":"'"$sid"'","model":"fake-model"}'
       case "$line" in
+        *'rename"'*)   # a bare /rename: the CLI names the session itself and answers without a model turn
+          emit '{"type":"system","subtype":"session_title_changed","title":"fake-generated-title","session_id":"'"$sid"'"}'
+          emit '{"type":"result","subtype":"success","is_error":false,"num_turns":0,"result":"","session_id":"'"$sid"'","total_cost_usd":0.02}' ;;
         *approve*)
           emit '{"type":"stream_event","event":{"type":"message_start","message":{"id":"m1"}}}'
           emit '{"type":"control_request","request_id":"req1","request":{"subtype":"can_use_tool","tool_name":"Write","input":{"file_path":"/tmp/x","content":"hi"},"tool_use_id":"t1"}}'
