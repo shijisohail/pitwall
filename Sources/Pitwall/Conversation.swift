@@ -38,6 +38,10 @@ final class Conversation: Identifiable {
     var queue: [QueuedMessage] = []
     /// Set by "send now": the interrupt that follows must not hand the queue back to the composer.
     @ObservationIgnored var drainAfterStop = false
+    /// A new session is named like the terminal does: the first prompt stands in until the first reply
+    /// finishes, then a bare `/rename` makes the CLI generate a title and record it in the transcript.
+    @ObservationIgnored var autoNamePending = false
+    @ObservationIgnored var silentResults = 0       // results of those internal /rename calls, which must not look like a turn
     /// Subagents Claude has spawned in this session (see Agents.swift).
     var agents: [AgentRun] = []
     @ObservationIgnored var agentSlots: [String: Int] = [:]
@@ -169,7 +173,10 @@ final class Conversation: Identifiable {
         var blocks: [Block] = images.compactMap { Self.png($0) }.map { Block(kind: .image, imageData: $0) }
         if !text.isEmpty { blocks.append(Block(kind: .text, text: text)) }
         messages.append(ChatMessage(role: .user, blocks: blocks))
-        if title == Self.placeholderTitle, !text.isEmpty { title = String(text.prefix(48)) }
+        if title == Self.placeholderTitle, !text.isEmpty {
+            title = String(text.prefix(48))
+            autoNamePending = !text.hasPrefix("/")
+        }
         lastPrompt = text; updatedAt = Date()
         turnHadAssistant = false; stopRequested = false
 
@@ -258,6 +265,7 @@ final class Conversation: Identifiable {
     }
 
     func startRunner() throws {
+        silentResults = 0
         let r = ClaudeRunner()
         r.onEvent = { [weak self] e in self?.handle(e) }
         r.onExit = { [weak self] code, err in
@@ -413,6 +421,7 @@ final class Conversation: Identifiable {
     }
 
     private func handleResult(_ e: [String: Any]) {
+        if silentResults > 0 { silentResults -= 1; return }     // the automatic /rename finishing, not a turn
         if let c = e["total_cost_usd"] as? Double { cost = c }      // whole-conversation total, also when resumed
         if let sid = e["session_id"] as? String { sessionID = sid }
         if let mu = e["modelUsage"] as? [String: Any],
@@ -429,6 +438,12 @@ final class Conversation: Identifiable {
         let wasStopped = stopRequested
         isRunning = false; turnStart = nil; approvals.removeAll(); retryNote = nil; stopRequested = false
         updatedAt = Date()
+        if autoNamePending {
+            autoNamePending = false
+            if !failed, !wasStopped, turnHadAssistant, runner?.isAlive == true {
+                silentResults += 1; runner?.sendUser("/rename")
+            }
+        }
         // A clean finish continues with the queue. A stop or an error leaves it alone (a stop already handed it back).
         if drainAfterStop { drainAfterStop = false; drainQueue() }
         else if !failed, !wasStopped { drainQueue() }

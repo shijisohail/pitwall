@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- New sessions get a generated name, as in the terminal. The first prompt stands in until the first reply finishes, then Pitwall asks the CLI for a title (a bare `/rename`) and it is saved in the session's transcript.
+
 ## [1.3.0] - 2026-11-02
 
 ### Added
