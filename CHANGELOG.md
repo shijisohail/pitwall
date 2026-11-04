@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- A narrow table in a reply now hugs its columns. Before, its border and background stretched across the whole chat width and left an empty bordered area to the right.
+
 ## [1.3.0] - 2026-11-02
 
 ### Added
