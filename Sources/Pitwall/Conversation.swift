@@ -421,7 +421,11 @@ final class Conversation: Identifiable {
     }
 
     private func handleResult(_ e: [String: Any]) {
-        if silentResults > 0 { silentResults -= 1; return }     // the automatic /rename finishing, not a turn
+        if silentResults > 0 {
+            silentResults -= 1
+            if e["num_turns"] as? Int == 0 { return }       // the automatic /rename finishing (no model turn), not a real result
+            silentResults = 0                                // anything else means it was answered as a normal prompt
+        }
         if let c = e["total_cost_usd"] as? Double { cost = c }      // whole-conversation total, also when resumed
         if let sid = e["session_id"] as? String { sessionID = sid }
         if let mu = e["modelUsage"] as? [String: Any],

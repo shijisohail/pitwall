@@ -38,6 +38,20 @@ import Foundation
         }
     }
 
+    @Test func theFirstReplyTriggersAGeneratedSessionTitle() async {
+        await withFakeClaude {
+            let (_, c) = make()
+            c.send("hi")
+            #expect(await waitUntil { c.title == "fake-generated-title" })
+            #expect(await waitUntil { !c.isRunning })      // the internal /rename never looks like a turn
+            #expect(c.messages.count == 2)                 // the prompt and the reply, nothing from the rename
+            c.send("again")
+            #expect(await waitUntil { !c.isRunning && c.messages.count == 4 })
+            #expect(c.title == "fake-generated-title")     // only the first reply is named
+            c.teardown()
+        }
+    }
+
     @Test func approvingAToolSendsAllowOverTheWire() async {
         await withFakeClaude {
             let (_, c) = make(); c.permission = .manual
