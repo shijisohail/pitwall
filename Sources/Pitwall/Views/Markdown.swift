@@ -189,7 +189,8 @@ struct TableView: View {
                 ForEach(0..<n, id: \.self) { c in cell(table.rows[r][c], col: c, header: false, row: r) }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Hug the columns: the layout already caps its width at what is offered, so narrow tables shouldn't leave an
+        // empty bordered area to their right.
         .background(.black.opacity(0.22))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.12)))

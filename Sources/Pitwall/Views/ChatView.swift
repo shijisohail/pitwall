@@ -6,6 +6,7 @@ struct ChatView: View {
     @Binding var inspectorOpen: Bool
     @Environment(Store.self) private var store
     @Bindable private var settings = AppSettings.shared
+    @State private var chatHeight: CGFloat = 800
 
     private var scrollToken: Int {
         let last = conversation.messages.last?.blocks.last
@@ -69,6 +70,9 @@ struct ChatView: View {
             }
         }
         .frame(minWidth: 480)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { chatHeight = $0 }
+        // A card taller than the window would push its own buttons off-screen, so cards scroll inside this cap.
+        .environment(\.approvalMaxHeight, max(220, chatHeight * 0.6))
         .attachmentDrop(for: conversation)
     }
 

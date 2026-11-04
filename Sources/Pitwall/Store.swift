@@ -65,6 +65,11 @@ final class Store {
         didSet { persistTabs() }
     }
 
+    /// Pinned chats (conversation or session ids), in the order they were pinned. They sit at the top of the session list.
+    var pinned: [String] = [] {
+        didSet { persistPins() }
+    }
+
     private var prompts: [History.PromptEntry] = []
     private var owned: Set<String> = []
     private var loadingCatalogs: Set<String> = []
@@ -76,6 +81,7 @@ final class Store {
         showAutomation = defaults.bool(forKey: "showAutomation")
         workspace = defaults.stringArray(forKey: "workspace") ?? []
         tabs = defaults.stringArray(forKey: "tabs") ?? []
+        pinned = defaults.stringArray(forKey: "pinned") ?? []
         owned = Set(defaults.stringArray(forKey: "pitwallOwned") ?? [])
         // Switching the Agent view on rebuilds each session's finished agents from its transcript; off clears them, so a
         // session never shows agents that were left "working" while tracking was paused.
@@ -95,6 +101,23 @@ final class Store {
     /// A session created in Pitwall gets a different id on disk once it has run, so persist the durable (session) id.
     func persistTabs() {
         defaults.set(tabs.map { id in conversations.first { $0.id == id }?.sessionID ?? id }, forKey: "tabs")
+    }
+
+    /// Same reasoning as `persistTabs`: a session started in Pitwall gets its durable id once it has run.
+    func persistPins() {
+        defaults.set(pinned.map { id in conversations.first { $0.id == id }?.sessionID ?? id }, forKey: "pinned")
+    }
+
+    func isPinned(_ c: Conversation) -> Bool { pinned.contains(c.id) || (c.sessionID.map { pinned.contains($0) } ?? false) }
+
+    func togglePin(_ c: Conversation) {
+        if isPinned(c) { pinned.removeAll { $0 == c.id || $0 == c.sessionID } } else { pinned.append(c.sessionID ?? c.id) }
+    }
+
+    /// Pinned sessions that pass the current filter, in pin order.
+    var pinnedConversations: [Conversation] {
+        let shown = filtered
+        return pinned.compactMap { id in shown.first { $0.id == id || $0.sessionID == id } }
     }
 
     var current: Conversation? { conversations.first { $0.id == selection } }
@@ -146,7 +169,8 @@ final class Store {
         return latest.sorted { $0.value > $1.value }.map { Project(path: $0.key) }
     }
 
-    func conversations(in p: Project) -> [Conversation] { filtered.filter { owner($0) == p.path } }
+    /// A project's sessions, newest first. Pinned ones are listed in the Pinned section instead.
+    func conversations(in p: Project) -> [Conversation] { filtered.filter { owner($0) == p.path && !isPinned($0) } }
 
     /// Folders Claude Code has history for that aren't open yet, newest first.
     func recentProjects() -> [RecentProject] {
@@ -181,7 +205,7 @@ final class Store {
         }
         // Drop tabs whose session vanished or whose folder was closed.
         tabs.removeAll { id in conversations.first { $0.id == id }.map { owner($0) == nil } ?? true }
-        persistTabs()
+        persistTabs(); persistPins()
         if !didInitialSelect {
             didInitialSelect = true
             if selection == nil { selection = tabs.first ?? filtered.first?.id }
