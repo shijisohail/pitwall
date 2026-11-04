@@ -17,6 +17,16 @@ struct ApprovalStack: View {
     }
 }
 
+private struct ApprovalMaxHeightKey: EnvironmentKey { static let defaultValue: CGFloat = 480 }
+
+extension EnvironmentValues {
+    /// Tallest an approval card's scrolling body may grow before it scrolls instead.
+    var approvalMaxHeight: CGFloat {
+        get { self[ApprovalMaxHeightKey.self] }
+        set { self[ApprovalMaxHeightKey.self] = newValue }
+    }
+}
+
 private extension View {
     func approvalChrome(_ tint: Color) -> some View {
         padding(16).panel(RoundedRectangle(cornerRadius: 12), tint: tint.opacity(0.08), border: tint.opacity(0.6))
@@ -119,6 +129,8 @@ struct QuestionCard: View {
     let a: Approval
     @State private var picks: [Int: Set<String>] = [:]
     @State private var other: [Int: String] = [:]
+    @State private var bodyHeight: CGFloat = 0
+    @Environment(\.approvalMaxHeight) private var maxHeight
 
     private var questions: [[String: Any]] { a.input["questions"] as? [[String: Any]] ?? [] }
 
@@ -127,6 +139,23 @@ struct QuestionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Claude has a question", systemImage: "questionmark.bubble").fontWeight(.semibold)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) { questionList }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bodyHeight = $0 }
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(height: bodyHeight > 0 ? min(bodyHeight, maxHeight) : nil)
+            HStack {
+                Button("Skip") { conversation.deny(a, message: "The user skipped this question.") }.buttonStyle(HTBSecondary())
+                Spacer()
+                Button("Submit") { submit() }.buttonStyle(HTBPrimary())
+                    .disabled(!questions.indices.allSatisfy(answered))
+            }
+        }
+        .approvalChrome(.yellow)
+    }
+
+    @ViewBuilder private var questionList: some View {
             ForEach(Array(questions.enumerated()), id: \.offset) { i, q in
                 let multi = q["multiSelect"] as? Bool ?? false
                 let options = q["options"] as? [[String: Any]] ?? []
@@ -163,14 +192,6 @@ struct QuestionCard: View {
                         .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
                 }
             }
-            HStack {
-                Button("Skip") { conversation.deny(a, message: "The user skipped this question.") }.buttonStyle(HTBSecondary())
-                Spacer()
-                Button("Submit") { submit() }.buttonStyle(HTBPrimary())
-                    .disabled(!questions.indices.allSatisfy(answered))
-            }
-        }
-        .approvalChrome(.yellow)
     }
 
     private func submit() {
