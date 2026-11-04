@@ -6,10 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-04
+
 ### Added
+- **Pin to Top** (right-click a session): pinned chats get a **Pinned** section above the projects, in pin order, and are not repeated under their project. Pins survive a relaunch.
 - New sessions get a generated name, as in the terminal. The first prompt stands in until the first reply finishes, then Pitwall asks the CLI for a title (a bare `/rename`) and it is saved in the session's transcript.
 
 ### Fixed
+- A "Claude has a question" card with many questions no longer pushes Submit and Skip off-screen: the questions scroll inside the card, with the buttons pinned below.
 - A narrow table in a reply now hugs its columns. Before, its border and background stretched across the whole chat width and left an empty bordered area to the right.
 
 ## [1.3.0] - 2026-11-02
