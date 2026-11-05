@@ -122,6 +122,10 @@ import Foundation
         s.cycleTab(-1); #expect(s.selection == c.id)
         s.moveTab(c.id, before: a.id)
         #expect(s.tabs == [c.id, a.id, b.id])
+        s.moveTab(c.id, onto: b.id)                           // dragging right: takes the target's slot, so it can reach the end
+        #expect(s.tabs == [a.id, b.id, c.id])
+        s.moveTab(a.id, onto: c.id)
+        #expect(s.tabs == [b.id, c.id, a.id])
     }
 
     @Test func closeOtherTabsAndTabsToTheRight() {

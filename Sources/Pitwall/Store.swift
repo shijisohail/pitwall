@@ -290,6 +290,13 @@ final class Store {
         selectTab(tabs[(i + d + tabs.count) % tabs.count])
     }
 
+    /// Drop a tab onto another: it takes that tab's slot, so a drag works in both directions and the last slot is reachable.
+    func moveTab(_ id: String, onto target: String) {
+        guard id != target, let from = tabs.firstIndex(of: id), let to = tabs.firstIndex(of: target) else { return }
+        tabs.remove(at: from)
+        tabs.insert(id, at: to)
+    }
+
     func moveTab(_ id: String, before target: String) {
         guard id != target, let from = tabs.firstIndex(of: id) else { return }
         tabs.remove(at: from)

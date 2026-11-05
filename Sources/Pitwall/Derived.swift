@@ -89,6 +89,13 @@ extension Conversation {
 
     var latestPlan: String? { latestTool("ExitPlanMode")?.input["plan"] as? String }
 
+    /// `Agent` calls in the current turn that haven't returned yet: subagents working right now, known without the
+    /// opt-in Agent view. A background agent returns at once, so the Agent view's own count covers those.
+    var runningAgentCalls: Int {
+        let turn = messages.reversed().prefix(while: { $0.role != .user })
+        return turn.reduce(0) { n, m in n + m.blocks.filter { $0.kind == .tool && ($0.toolName == "Agent" || $0.toolName == "Task") && $0.result == nil }.count }
+    }
+
     /// What the running turn is doing right now, in a few words, for the status bar above the composer.
     var activityText: String {
         if !approvals.isEmpty { return "Waiting for your approval" }
