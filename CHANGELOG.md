@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-05
+
+### Added
+- A pink **N agents working** badge in the running bar above the prompt whenever Claude has subagents going. It no longer needs the Agent view turned on. A tab also shows an agent count when two or more are running in that session.
+
+### Fixed
+- Reordering tabs: dragging a tab to the right did nothing and the last slot could not be reached. A dropped tab now takes the slot of the tab it lands on, in either direction.
+- The tab strip scrolls to the selected tab, so a new or far-right tab is no longer clipped behind the **+** button.
+
 ## [1.3.1] - 2026-11-04
 
 ### Added

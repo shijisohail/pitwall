@@ -35,7 +35,7 @@
   "description": "A free, open-source native macOS app for Claude Code: run many sessions in tabs, approve tool requests in one click, queue messages while Claude works, and see every change live.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "macOS 26 or later",
-  "softwareVersion": "1.3.1",
+  "softwareVersion": "1.3.2",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -143,7 +143,7 @@
   h2.sec { font-size: clamp(38px, 5vw, 56px); line-height: 1; max-width: 16em; }
   p.sub { color: var(--muted); max-width: 40em; margin: 14px 0 36px; }
 
-  /* New in 1.3.1 */
+  /* New in 1.3.2 */
   .new { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 56px; }
   .new ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
   .new li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: baseline; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
@@ -214,7 +214,7 @@
           <a class="btn primary" href="https://github.com/shijisohail/pitwall/releases/latest">Download for macOS</a>
           <a class="btn" href="https://github.com/shijisohail/pitwall">View source on GitHub</a>
         </div>
-        <p class="fine">Version 1.3.1. Needs macOS 26 or later and Claude Code. MIT license, no telemetry.</p>
+        <p class="fine">Version 1.3.2. Needs macOS 26 or later and Claude Code. MIT license, no telemetry.</p>
       </div>
 
       <div>
@@ -264,15 +264,14 @@
     <section id="whats-new">
       <div class="new">
         <div>
-          <h2 class="sec">New in 1.3.1</h2>
-          <p class="sub">The latest release, shipped 4 November 2026.</p>
+          <h2 class="sec">New in 1.3.2</h2>
+          <p class="sub">The latest release, shipped 5 November 2026.</p>
           <a class="btn" href="https://github.com/shijisohail/pitwall/blob/main/CHANGELOG.md">Read the changelog</a>
         </div>
         <ul>
-          <li><b>Named for you</b><span>A new chat is named after its first reply, the way the terminal does it, instead of keeping the start of your first message.</span></li>
-          <li><b>Pin chats</b><span>Right-click a session and choose Pin to Top. Pinned chats sit above your projects and survive a relaunch.</span></li>
-          <li><b>Tall questions scroll</b><span>A question card with many questions scrolls inside itself, so Submit and Skip are always reachable.</span></li>
-          <li><b>Tables that fit</b><span>A narrow table hugs its columns instead of stretching a bordered box across the chat.</span></li>
+          <li><b>See your agents</b><span>A badge above the prompt tells you how many subagents are working, and tabs show a count too, without turning on the Agent view.</span></li>
+          <li><b>Tabs that move</b><span>Drag a tab either way, all the way to the end. The strip scrolls to the tab you picked, so a new one is never hidden.</span></li>
+          <li><b>1.3.1</b><span>Chats named after the first reply, Pin to Top, scrolling question cards, and tables that fit their columns.</span></li>
           <li><b>1.3.0</b><span>Side questions with <code>/btw</code>, a Tasks bar for background commands, a built-in file viewer, and replies you can select and copy.</span></li>
         </ul>
       </div>
