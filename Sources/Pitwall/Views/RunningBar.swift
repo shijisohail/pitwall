@@ -11,9 +11,11 @@ struct RunningBar: View {
     private var waiting: Bool { !conversation.approvals.isEmpty }
     private var color: Color { waiting ? HTB.amber : HTB.green }
 
+    /// Subagents working now: the Agent view's count when it is on, else the unreturned `Agent` calls in this turn.
+    private var agentCount: Int { max(settings.showAgents ? conversation.agentsWorking : 0, conversation.runningAgentCalls) }
+
     private var extras: String {
         var p: [String] = []
-        if settings.showAgents, conversation.agentsWorking > 0 { p.append("\(conversation.agentsWorking) agent\(conversation.agentsWorking == 1 ? "" : "s")") }
         if !conversation.queue.isEmpty { p.append("\(conversation.queue.count) queued") }
         return p.joined(separator: " · ")
     }
@@ -23,6 +25,12 @@ struct RunningBar: View {
             HStack(spacing: 10) {
                 PulseDot(color: color, pulsing: true)
                 Text(conversation.activityText).font(.system(size: 12.5, weight: .medium)).lineLimit(1).truncationMode(.middle)
+                if agentCount > 0 {
+                    Label("\(agentCount) agent\(agentCount == 1 ? "" : "s") working", systemImage: "person.2.fill")
+                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(.pink).lineLimit(1)
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(Color.pink.opacity(0.14), in: Capsule())
+                }
                 if !extras.isEmpty { Text(extras).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1) }
                 Spacer(minLength: 8)
                 if let t = conversation.turnStart { Text(t, style: .timer).font(.system(size: 12, design: .monospaced)).foregroundStyle(.secondary).monospacedDigit() }

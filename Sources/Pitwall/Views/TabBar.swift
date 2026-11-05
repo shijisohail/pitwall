@@ -11,14 +11,19 @@ struct TabBar: View {
         HStack(spacing: 4) {
             boardTab
             Rectangle().fill(HTB.border).frame(width: 1, height: 14).padding(.horizontal, 4)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    ForEach(store.tabs, id: \.self) { id in
-                        if let c = store.conversations.first(where: { $0.id == id }) {
-                            TabItem(c: c, active: !store.showBoard && store.selection == id)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 2) {
+                        ForEach(store.tabs, id: \.self) { id in
+                            if let c = store.conversations.first(where: { $0.id == id }) {
+                                TabItem(c: c, active: !store.showBoard && store.selection == id).id(id)
+                            }
                         }
                     }
                 }
+                // Keep the selected tab in view: a new or far-right tab was otherwise clipped behind the + button.
+                .onChange(of: store.selection) { _, id in if let id { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id) } } }
+                .onChange(of: store.tabs.count) { _, _ in if let id = store.selection { proxy.scrollTo(id) } }
             }
             Button { store.newConversation() } label: { Image(systemName: "plus").font(.system(size: 11, weight: .bold)).frame(width: 24, height: 24) }
                 .buttonStyle(.plain).foregroundStyle(.secondary).help("New tab (⌘T)").accessibilityLabel("New tab")
@@ -53,6 +58,9 @@ private struct TabItem: View {
     var body: some View {
         HStack(spacing: 8) {
             PulseDot(color: dot, pulsing: c.isRunning || !c.approvals.isEmpty)
+            if c.runningAgentCalls > 1 {
+                Label("\(c.runningAgentCalls)", systemImage: "person.2.fill").font(.system(size: 9.5, weight: .bold)).foregroundStyle(.pink)
+            }
             Text(c.title).font(.system(size: 11.5, design: .monospaced)).lineLimit(1).frame(maxWidth: 170, alignment: .leading)
                 .foregroundStyle(active ? Color.primary : Color.secondary)
             Button { store.closeTab(c.id) } label: {
@@ -70,7 +78,7 @@ private struct TabItem: View {
         .draggable(c.id)
         .dropDestination(for: String.self) { ids, _ in
             guard let id = ids.first else { return false }
-            store.moveTab(id, before: c.id); return true
+            store.moveTab(id, onto: c.id); return true
         }
         .contextMenu {
             Button("Close Tab") { store.closeTab(c.id) }
