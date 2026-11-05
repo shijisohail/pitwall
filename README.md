@@ -20,10 +20,10 @@
 
 ---
 
-> ### 🎉 Pitwall v1.3.1 is out
-> **[⬇️ Download Pitwall-1.3.1.dmg](https://github.com/shijisohail/pitwall/releases/download/v1.3.1/Pitwall-1.3.1.dmg)** · [Release notes](https://github.com/shijisohail/pitwall/releases/tag/v1.3.1) · [Changelog](CHANGELOG.md)
+> ### 🎉 Pitwall v1.3.2 is out
+> **[⬇️ Download Pitwall-1.3.2.dmg](https://github.com/shijisohail/pitwall/releases/download/v1.3.2/Pitwall-1.3.2.dmg)** · [Release notes](https://github.com/shijisohail/pitwall/releases/tag/v1.3.2) · [Changelog](CHANGELOG.md)
 >
-> New: chats are named for you after the first reply, and you can pin sessions to the top. 1.3.0 added `/btw` side questions that work while Claude is busy, a **Tasks** bar for its background commands, live `!` shell output, a **built-in file viewer**, and replies you can select across paragraphs and copy. 1.2.2 added typing anywhere in a chat and highlighted prompt keywords.
+> New: an **agents working** badge above the prompt, and tabs you can drag anywhere. 1.3.1 named chats after the first reply and added Pin to Top. 1.3.0 added `/btw` side questions that work while Claude is busy, a **Tasks** bar for its background commands, live `!` shell output, a **built-in file viewer**, and replies you can select across paragraphs and copy. 1.2.2 added typing anywhere in a chat and highlighted prompt keywords.
 >
 > The first builds are *ad-hoc signed, not notarized*, so macOS asks you to approve them once. See [Install](#install) (it takes ten seconds).
 
@@ -135,7 +135,7 @@ Plus: a 5-hour and 7-day **usage meter**, ⌘K **search across every session and
    - run `xattr -dr com.apple.quarantine /Applications/Pitwall.app` in Terminal.
 4. Click **Choose Folder…** and pick a project.
 
-> Only approve builds you trust. Compare the `.dmg`'s SHA-256 with the `.sha256` file on the release (`shasum -a 256 -c Pitwall-1.3.1.dmg.sha256`), or build it yourself from source below. A copy you build on your own Mac never shows the warning.
+> Only approve builds you trust. Compare the `.dmg`'s SHA-256 with the `.sha256` file on the release (`shasum -a 256 -c Pitwall-1.3.2.dmg.sha256`), or build it yourself from source below. A copy you build on your own Mac never shows the warning.
 
 ### Folder permission pop-ups
 
