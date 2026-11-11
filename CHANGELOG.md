@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A short sound when a session finishes its turn, so you can look away while Claude works. On by default; turn it off in Settings → "Play a sound when a session finishes". It stays quiet when you stop a run yourself.
+
 ## [1.3.2] - 2026-11-05
 
 ### Added

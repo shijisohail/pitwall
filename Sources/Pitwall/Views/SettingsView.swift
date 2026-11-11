@@ -39,6 +39,7 @@ struct SettingsView: View {
                 }
                 Text(settings.defaultPermission.blurb).font(.caption).foregroundStyle(.secondary)
                 Toggle("Confirm before quitting while sessions are working", isOn: $settings.confirmQuitWhileRunning)
+                Toggle("Play a sound when a session finishes", isOn: $settings.soundOnFinish)
             }
             Section("Agents") {
                 Toggle("Agent view", isOn: $settings.showAgents)

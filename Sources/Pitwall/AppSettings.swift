@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Observation
 
 /// User preferences (Settings, ⌘,). Stored in UserDefaults; nothing here is ever prompt or transcript content.
@@ -26,6 +27,9 @@ final class AppSettings {
         }
     }
 
+    /// A short sound when a session finishes its turn, so you can look away while it works. On by default.
+    var soundOnFinish: Bool { didSet { defaults.set(soundOnFinish, forKey: "soundOnFinish") } }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let stored = PermissionMode(rawValue: defaults.string(forKey: "defaultPermission") ?? "") ?? .acceptEdits
@@ -34,6 +38,7 @@ final class AppSettings {
         animatedBackground = defaults.object(forKey: "animatedBackground") as? Bool ?? false     // costs ~4% CPU while idle, so opt-in
         confirmQuitWhileRunning = defaults.object(forKey: "confirmQuit") as? Bool ?? true
         permissionsTipDismissed = defaults.object(forKey: "permissionsTipDismissed") as? Bool ?? false
+        soundOnFinish = defaults.object(forKey: "soundOnFinish") as? Bool ?? true
         showAgents = defaults.object(forKey: "showAgents") as? Bool ?? false
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
@@ -42,4 +47,11 @@ final class AppSettings {
 extension Notification.Name {
     /// Posted when the Agent view is switched on or off.
     static let agentViewChanged = Notification.Name("pitwall.agentViewChanged")
+}
+
+/// The "session finished" sound. A system sound, so nothing is bundled; `play` is swappable for tests.
+enum FinishSound {
+    nonisolated(unsafe) static var play: () -> Void = { NSSound(named: "Glass")?.play() }
+
+    @MainActor static func playIfEnabled() { if AppSettings.shared.soundOnFinish { play() } }
 }
