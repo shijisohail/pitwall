@@ -6,8 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-12
+
 ### Added
+- A **glass look**. The window blurs the desktop behind it, and cards, buttons, the tab bar and the area behind the prompt box are dark Liquid Glass. The lime-on-near-black theme is unchanged. **Settings → Appearance → Glassiness** sets how see-through it is, from solid to clear. macOS Reduce Transparency keeps the window solid.
+- **Full screen around the notch.** On a Mac with a camera notch, **Settings → Full screen → Use the area around the notch** makes full screen use the row beside the notch: tabs fill the space on the left of it and carry on to the right, and Close / Minimize / Exit Full Screen buttons appear at the top left. It replaces macOS's own full screen while on (⌃⌘F or the green button toggles it), so it is off by default.
 - A short sound when a session finishes its turn, so you can look away while Claude works. On by default; turn it off in Settings → "Play a sound when a session finishes". It stays quiet when you stop a run yourself.
+
+### Fixed
+- A long `/btw` answer, a card with many questions, or several approvals could grow until they pushed the prompt box off the window, with no way to scroll. They now cap their height and scroll, and Skip / Submit stay in view.
+- The tab's **✕** only responded over the thin strokes of the glyph, so a click a few pixels off did nothing. It now has a proper click target.
+- The tab strip now scrolls the selected tab fully into view, including when the window opens. A new or far-right tab could be left as a sliver beside the **+** button, where it could not be clicked.
 
 ## [1.3.2] - 2026-11-05
 
