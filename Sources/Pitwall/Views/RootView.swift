@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(Store.self) private var store
+    private let notch = NotchLayout.shared
 
     var body: some View {
         @Bindable var store = store
@@ -19,7 +20,12 @@ struct RootView: View {
             }
             .ignoresSafeArea(.container, edges: .top)      // tabs sit in the traffic-light row instead of under an empty strip
         }
+        .ignoresSafeArea(.container, edges: notch.active ? .top : [])      // the notch row belongs to the tab bar
+        .overlay(alignment: .topLeading) {
+            if notch.active { FullScreenControls().padding(.leading, 12).padding(.top, 7) }      // no title bar in this full screen
+        }
         .background { AuroraBackground() }
+        .background(WindowAccessor { NotchFullScreen.shared.attach($0) })
         .dropDestination(for: URL.self) { urls, _ in store.openDropped(urls) }
         .sheet(item: $store.sheet) { SheetHost(kind: $0) }
         .environment(\.openURL, OpenURLAction { url in
@@ -61,6 +67,9 @@ struct SessionScreen: View {
     private var divider: some View { Rectangle().fill(.white.opacity(0.07)).frame(width: 1) }
 }
 
+/// Width of the left rail. The tab bar starts here, and needs it to line up with the notch.
+let railWidth: CGFloat = 68
+
 struct Rail: View {
     @Environment(Store.self) private var store
 
@@ -74,7 +83,7 @@ struct Rail: View {
             item("folder.badge.plus", "Open or close projects (⌘O chooses a folder)", active: false) { store.sheet = .projects }
             item("command", "Commands & skills", active: false) { store.sheet = .commands }
         }
-        .padding(.vertical, 14).frame(width: 68)
+        .padding(.vertical, 14).frame(width: railWidth)
         .overlay(alignment: .trailing) { Rectangle().fill(.white.opacity(0.07)).frame(width: 1) }
     }
 

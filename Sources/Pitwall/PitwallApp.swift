@@ -12,7 +12,6 @@ struct PitwallApp: App {
                 .frame(minWidth: 1000, minHeight: 640)
                 .preferredColorScheme(.dark)
                 .tint(HTB.green)
-                .containerBackground(HTB.bg, for: .window)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1340, height: 840)
@@ -42,6 +41,12 @@ struct PitwallApp: App {
             CommandGroup(replacing: .saveItem) {
                 Button("Close Tab") { store.closeCurrentTab() }.keyboardShortcut("w")
                 Button("Close Window") { NSApp.keyWindow?.performClose(nil) }.keyboardShortcut("w", modifiers: [.command, .shift])
+            }
+            CommandGroup(after: .toolbar) {
+                if AppSettings.shared.notchFullScreen {
+                    Button(NotchFullScreen.shared.isFullScreen ? "Exit Full Screen" : "Enter Full Screen") { NotchFullScreen.shared.toggle() }
+                        .keyboardShortcut("f", modifiers: [.control, .command])
+                }
             }
             CommandMenu("Tabs") {
                 Button("Next Tab") { store.cycleTab(1) }.keyboardShortcut("]", modifiers: [.command, .shift])

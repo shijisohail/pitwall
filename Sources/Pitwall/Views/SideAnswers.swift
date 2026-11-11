@@ -4,12 +4,16 @@ import SwiftUI
 /// and never become part of the conversation.
 struct SideAnswers: View {
     @Bindable var conversation: Conversation
+    @Environment(\.approvalMaxHeight) private var maxHeight
 
     var body: some View {
         if !conversation.sideQA.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(conversation.sideQA.suffix(3)) { qa in
-                    SideAnswerRow(qa: qa) { conversation.dismissSide(qa.id) }
+            // A long answer scrolls here instead of growing until it pushes the prompt box off the window.
+            CappedScroll(maxHeight: max(140, maxHeight * 0.55)) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(conversation.sideQA.suffix(3)) { qa in
+                        SideAnswerRow(qa: qa) { conversation.dismissSide(qa.id) }
+                    }
                 }
             }
             .transition(.opacity)

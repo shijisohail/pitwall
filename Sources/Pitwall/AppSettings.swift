@@ -27,6 +27,19 @@ final class AppSettings {
         }
     }
 
+    /// 0 = solid dark, 1 = as clear as the glass gets. Drives the window's see-through tint and how opaque cards are.
+    var glassiness: Double { didSet { defaults.set(glassiness, forKey: "glassiness") } }
+    /// How much of the near-black theme colour covers the desktop blur behind the window (0.80 at the default).
+    var windowTint: Double { 0.95 - 0.6 * glassiness }
+    /// Opacity of the dark fill under cards and buttons, so more glassiness lets more of the glass show (0.55 at the default).
+    var cardFill: Double { 0.55 + (0.25 - glassiness) * 0.6 }
+
+    /// Full screen that uses the row beside the camera notch, with tabs on either side of it. Off by default because it
+    /// replaces macOS's own full screen (and its Spaces and Split View behaviour) with a custom one.
+    var notchFullScreen: Bool {
+        didSet { defaults.set(notchFullScreen, forKey: "notchFullScreen"); NotchFullScreen.shared.apply() }
+    }
+
     /// A short sound when a session finishes its turn, so you can look away while it works. On by default.
     var soundOnFinish: Bool { didSet { defaults.set(soundOnFinish, forKey: "soundOnFinish") } }
 
@@ -39,6 +52,8 @@ final class AppSettings {
         confirmQuitWhileRunning = defaults.object(forKey: "confirmQuit") as? Bool ?? true
         permissionsTipDismissed = defaults.object(forKey: "permissionsTipDismissed") as? Bool ?? false
         soundOnFinish = defaults.object(forKey: "soundOnFinish") as? Bool ?? true
+        glassiness = min(1, max(0, defaults.object(forKey: "glassiness") as? Double ?? 0.25))
+        notchFullScreen = defaults.object(forKey: "notchFullScreen") as? Bool ?? false
         showAgents = defaults.object(forKey: "showAgents") as? Bool ?? false
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
