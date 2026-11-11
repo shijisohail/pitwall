@@ -442,6 +442,7 @@ final class Conversation: Identifiable {
         let wasStopped = stopRequested
         isRunning = false; turnStart = nil; approvals.removeAll(); retryNote = nil; stopRequested = false
         updatedAt = Date()
+        if !wasStopped { FinishSound.playIfEnabled() }
         if autoNamePending {
             autoNamePending = false
             if !failed, !wasStopped, turnHadAssistant, runner?.isAlive == true {

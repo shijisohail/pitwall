@@ -60,12 +60,11 @@ struct ChatView: View {
                     Composer(conversation: conversation)
                 }
                 .frame(maxWidth: 760).padding(.horizontal, 26).padding(.bottom, 16).padding(.top, 24).frame(maxWidth: .infinity)
-                // Solid, so the transcript scrolling underneath never shows through the bars and the prompt box.
+                // Dark and frosted, so the transcript scrolling underneath blurs behind the bars and the prompt box instead of cluttering them.
                 .background(alignment: .top) {
-                    VStack(spacing: 0) {
-                        LinearGradient(colors: [HTB.bg.opacity(0), HTB.bg], startPoint: .top, endPoint: .bottom).frame(height: 24)
-                        HTB.bg
-                    }
+                    Rectangle().fill(HTB.bg.opacity(0.62)).background(.ultraThinMaterial)
+                        .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.12)],
+                                             startPoint: .top, endPoint: .bottom))
                 }
             }
         }

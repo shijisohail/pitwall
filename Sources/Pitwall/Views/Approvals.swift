@@ -2,14 +2,18 @@ import SwiftUI
 
 struct ApprovalStack: View {
     @Bindable var conversation: Conversation
+    @Environment(\.approvalMaxHeight) private var maxHeight
 
     var body: some View {
-        VStack(spacing: 10) {
-            ForEach(conversation.approvals) { a in
-                switch a.kind {
-                case .tool: ToolApprovalCard(conversation: conversation, a: a)
-                case .question: QuestionCard(conversation: conversation, a: a)
-                case .plan: PlanCard(conversation: conversation, a: a)
+        // Several cards, or one tall one, scroll as a block so the prompt box below never gets pushed away.
+        CappedScroll(maxHeight: maxHeight) {
+            VStack(spacing: 10) {
+                ForEach(conversation.approvals) { a in
+                    switch a.kind {
+                    case .tool: ToolApprovalCard(conversation: conversation, a: a)
+                    case .question: QuestionCard(conversation: conversation, a: a)
+                    case .plan: PlanCard(conversation: conversation, a: a)
+                    }
                 }
             }
         }
@@ -129,7 +133,6 @@ struct QuestionCard: View {
     let a: Approval
     @State private var picks: [Int: Set<String>] = [:]
     @State private var other: [Int: String] = [:]
-    @State private var bodyHeight: CGFloat = 0
     @Environment(\.approvalMaxHeight) private var maxHeight
 
     private var questions: [[String: Any]] { a.input["questions"] as? [[String: Any]] ?? [] }
@@ -139,12 +142,10 @@ struct QuestionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Claude has a question", systemImage: "questionmark.bubble").fontWeight(.semibold)
-            ScrollView {
+            // Room is left for the title and the Skip/Submit row, so the buttons stay on screen however many questions there are.
+            CappedScroll(maxHeight: max(120, maxHeight - 130)) {
                 VStack(alignment: .leading, spacing: 16) { questionList }
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bodyHeight = $0 }
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .frame(height: bodyHeight > 0 ? min(bodyHeight, maxHeight) : nil)
             HStack {
                 Button("Skip") { conversation.deny(a, message: "The user skipped this question.") }.buttonStyle(HTBSecondary())
                 Spacer()

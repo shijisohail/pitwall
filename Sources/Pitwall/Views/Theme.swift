@@ -12,13 +12,38 @@ enum HTB {
     static let border = Color(red: 0.16, green: 0.20, blue: 0.27)    // #293345
 }
 
-/// The window background: flat near-black with two faint glows and a dot grid.
+/// Behind-window blur, so the desktop shows through the window, darkened to the theme. Also makes the window non-opaque.
+struct WindowGlass: NSViewRepresentable {
+    final class Blur: NSVisualEffectView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            window?.isOpaque = false
+            window?.backgroundColor = .clear
+        }
+    }
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = Blur()
+        v.material = .hudWindow
+        v.blendingMode = .behindWindow
+        v.state = .active
+        return v
+    }
+    func updateNSView(_ v: NSVisualEffectView, context: Context) {}
+}
+
+/// The window background: the desktop blurred and tinted near-black, with two faint glows and a dot grid.
 struct AuroraBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         ZStack {
-            HTB.bg
+            if reduceTransparency {
+                HTB.bg
+            } else {
+                WindowGlass()
+                HTB.bg.opacity(AppSettings.shared.windowTint)       // Settings ▸ Appearance ▸ Glassiness
+            }
             // Only the two soft glows move, and slowly, so a few frames a second is plenty.
             // The dot grid sits outside the timeline so it is drawn once, not every frame.
             if reduceMotion || !AppSettings.shared.animatedBackground {
@@ -59,6 +84,24 @@ private struct DotGrid: View {
     }
 }
 
+/// Scrolls its content once it is taller than `maxHeight`, and is exactly as tall as the content when it is not.
+/// For anything that sits in the chat's bottom bar, which can't grow without pushing the prompt box off-screen.
+struct CappedScroll<Content: View>: View {
+    let maxHeight: CGFloat
+    @ViewBuilder var content: Content
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        ScrollView {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(height: min(contentHeight, maxHeight))
+    }
+}
+
 func relativeTime(_ d: Date) -> String {
     let f = RelativeDateTimeFormatter()
     f.unitsStyle = .abbreviated
@@ -66,11 +109,15 @@ func relativeTime(_ d: Date) -> String {
 }
 
 extension View {
-    /// A flat dark panel with a hairline border; `tint` marks it as needing attention.
+    /// A dark glass panel with a hairline border; `tint` marks it as needing attention.
     func panel<S: InsettableShape>(_ shape: S, tint: Color? = nil, border: Color? = nil) -> some View {
-        background(shape.fill(HTB.panel.opacity(0.88)))
+        background(shape.fill(HTB.panel.opacity(AppSettings.shared.cardFill)))
             .background(shape.fill(tint ?? .clear))
-            .overlay(shape.strokeBorder(border ?? HTB.border, lineWidth: 1))
+            .glassEffect(.regular.tint(HTB.bg.opacity(0.7)), in: shape)
+            .overlay(shape.strokeBorder(border.map { AnyShapeStyle($0) }
+                                        ?? AnyShapeStyle(LinearGradient(colors: [.white.opacity(0.14), HTB.border],
+                                                                        startPoint: .top, endPoint: .center)),
+                                        lineWidth: 1))
     }
 
     func glassCard(_ radius: CGFloat = 16, tint: Color? = nil) -> some View {
@@ -108,7 +155,8 @@ struct HTBSecondary: ButtonStyle {
             .foregroundStyle(color.opacity(enabled ? 1 : 0.4))
             .padding(.horizontal, circle ? 0 : 12).padding(.vertical, circle ? 0 : 6)
             .frame(minWidth: circle ? 30 : nil, minHeight: circle ? 30 : nil)
-            .background(shape.fill(configuration.isPressed ? HTB.raised : HTB.panel))
+            .background(shape.fill(configuration.isPressed ? HTB.raised : HTB.panel.opacity(AppSettings.shared.cardFill)))
+            .glassEffect(.regular.tint(HTB.bg.opacity(0.7)), in: shape)
             .overlay(shape.stroke(color == .primary ? HTB.border : color.opacity(0.55), lineWidth: 1))
     }
 }
@@ -120,7 +168,8 @@ struct HTBChip: ButtonStyle {
             .font(.system(size: 12, weight: on ? .bold : .regular, design: .monospaced))
             .foregroundStyle(on ? HTB.green : Color.secondary)
             .padding(.horizontal, 11).padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(on ? HTB.green.opacity(0.12) : (configuration.isPressed ? HTB.raised : HTB.panel)))
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(on ? HTB.green.opacity(0.12) : (configuration.isPressed ? HTB.raised : HTB.panel.opacity(AppSettings.shared.cardFill))))
+            .glassEffect(.regular.tint(HTB.bg.opacity(0.7)), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(on ? HTB.green.opacity(0.6) : HTB.border, lineWidth: 1))
     }
 }

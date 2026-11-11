@@ -39,6 +39,7 @@ struct SettingsView: View {
                 }
                 Text(settings.defaultPermission.blurb).font(.caption).foregroundStyle(.secondary)
                 Toggle("Confirm before quitting while sessions are working", isOn: $settings.confirmQuitWhileRunning)
+                Toggle("Play a sound when a session finishes", isOn: $settings.soundOnFinish)
             }
             Section("Agents") {
                 Toggle("Agent view", isOn: $settings.showAgents)
@@ -46,8 +47,22 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Appearance") {
+                LabeledContent("Glassiness") {
+                    HStack(spacing: 8) {
+                        Text("Solid").font(.caption).foregroundStyle(.secondary)
+                        Slider(value: $settings.glassiness, in: 0...1).frame(width: 180)
+                        Text("Clear").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Text("How see-through the window, cards and buttons are. Left is a solid dark window; right lets the desktop show through. Ignored when macOS Reduce Transparency is on.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Animate the background", isOn: $settings.animatedBackground)
                 Text("Slowly drifting glows. Uses a few percent of a CPU core while the window is open, and is always off when macOS Reduce Motion is on.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Full screen") {
+                Toggle("Use the area around the notch", isOn: $settings.notchFullScreen)
+                Text("On a Mac with a camera notch, full screen puts the tabs in the menu-bar row, either side of the notch, instead of leaving a black strip. Replaces macOS's own full screen: use the green button or View ▸ Full Screen (⌃⌘F), and the same again to leave.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("History") {

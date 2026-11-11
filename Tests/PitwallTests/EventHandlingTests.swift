@@ -17,6 +17,17 @@ import Foundation
         ["type": "result", "subtype": sub, "is_error": isError, "result": text, "session_id": "s1", "total_cost_usd": 0.5]
     }
 
+    @Test func finishingATurnPlaysTheSound() {
+        let original = FinishSound.play, wasOn = AppSettings.shared.soundOnFinish
+        defer { FinishSound.play = original; AppSettings.shared.soundOnFinish = wasOn }
+        nonisolated(unsafe) var played = 0
+        FinishSound.play = { played += 1 }
+        AppSettings.shared.soundOnFinish = true
+        let (_, c) = make(); c.isRunning = true
+        c.handle(result("done"))
+        #expect(played >= 1)          // `>=`: other suites finish turns concurrently against the same hook
+    }
+
     @Test func streamedTextBecomesOneAssistantMessage() {
         let (_, c) = make(); c.isRunning = true
         c.handle(stream(["type": "message_start", "message": ["id": "m1", "usage": ["input_tokens": 10, "cache_read_input_tokens": 5]]]))
