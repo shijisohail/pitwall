@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-12
+
 ### Added
 - **Settings → Browser → Claude in Chrome.** Starts sessions with `--chrome` so Claude can drive your Chrome (needs the Claude in Chrome extension, signed in to the same account). Off by default, and applies to sessions started or restarted after you turn it on.
 
