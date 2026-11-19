@@ -67,6 +67,8 @@ struct BoardView: View {
                 .padding(.horizontal, 14).padding(.vertical, 9).frame(width: 300)
             }.buttonStyle(.plain).panel(RoundedRectangle(cornerRadius: 8))
             if let u = store.usage { UsageMini(usage: u) }
+            Button { store.sheet = .stats } label: { Image(systemName: "chart.bar.xaxis").padding(.horizontal, 2) }
+                .buttonStyle(HTBSecondary()).controlSize(.large).help("Live stats: context, tool calls, timing")
             Menu {
                 Button("New session in current project") { store.newConversation() }
                 Button("New session in a worktree…") { store.newWorktreeConversation() }

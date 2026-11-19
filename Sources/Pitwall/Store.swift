@@ -20,7 +20,7 @@ struct RecentProject: Identifiable {
 }
 
 enum SheetKind: Identifiable, Hashable {
-    case switcher, commands, mcp, memory, diff, status, projects, config(String), viewer(String)
+    case switcher, commands, mcp, memory, diff, status, stats, projects, config(String), viewer(String)
     var id: String {
         switch self {
         case .config(let t): "config-\(t)"

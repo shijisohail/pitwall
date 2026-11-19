@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-private struct SheetFrame<Content: View>: View {
+struct SheetFrame<Content: View>: View {
     let title: String
     var width: CGFloat = 600
     var height: CGFloat = 540
@@ -33,6 +33,7 @@ struct SheetHost: View {
         case .memory: MemorySheet()
         case .diff: DiffSheet()
         case .status: StatusSheet()
+        case .stats: LiveStatsSheet()
         case .projects: ProjectsSheet()
         case .config(let tab): ConfigSheet(tab: tab)
         case .viewer(let path): FileViewerSheet(path: path)
