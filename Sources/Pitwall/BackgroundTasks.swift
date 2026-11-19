@@ -79,7 +79,7 @@ extension Conversation {
         }
     }
 
-    private static func date(fromMillis v: Any?) -> Date? {
+    static func date(fromMillis v: Any?) -> Date? {
         guard let ms = (v as? Double) ?? (v as? Int).map(Double.init), ms > 0 else { return nil }
         return Date(timeIntervalSince1970: ms / 1000)
     }

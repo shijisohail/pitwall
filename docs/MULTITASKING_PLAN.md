@@ -2,6 +2,8 @@
 
 **Status:** steps 1 to 4 below are built, along with a built-in file viewer (see the changelog). What remains open is the unverified question about `side_question` context, below.
 
+**Parallel agents (2026-11-13):** subagent Stop / Stop all and the 20-subagent limit warning (Agents tab), a Workflows panel above the Tasks bar, and per-session git worktrees are built on the same events. Evidence and limits: [CLAUDE_CODE_PROTOCOL.md](CLAUDE_CODE_PROTOCOL.md#parallel-work-stopping-agents-workflows-worktrees).
+
 Goal: while Claude works, you can ask a side question, watch and control background commands, and run shell commands, as in the terminal. Protocol details and evidence: [CLAUDE_CODE_PROTOCOL.md](CLAUDE_CODE_PROTOCOL.md#multitasking-side-questions-background-tasks-monitor--shell).
 
 ## What the CLI does, and where Pitwall is

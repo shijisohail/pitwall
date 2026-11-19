@@ -369,6 +369,7 @@ final class Store {
         let c = Conversation(cwd: dir)
         c.store = self
         conversations.append(c); open(c)
+        if AppSettings.shared.worktreePerSession { c.toggleWorktree() }
     }
 
     @discardableResult

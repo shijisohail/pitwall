@@ -102,7 +102,7 @@ Model, effort and permission mode change mid-session. Fork a session, rename it,
 </tr>
 </table>
 
-**While Claude works**, ask a quick side question with `/btw` (answered on the side, without interrupting it), watch and stop its background commands in the **Tasks** bar (<kbd>⌘B</kbd> moves a running command to the background), and run `!` shell commands with live output and a Stop button. **Built-in viewer:** click any file name in a reply to read it in Pitwall: Markdown rendered, code with line numbers, JSON pretty-printed, images, PDFs, and Office files, audio and video through Quick Look. <kbd>⇧⌘O</kbd> views any file.
+**Parallel work:** start a session in its own **git worktree** so it can't collide with another session in the same project, watch **dynamic workflows** (phases and agents) in their own panel, and stop any subagent from the Agent view. **While Claude works**, ask a quick side question with `/btw` (answered on the side, without interrupting it), watch and stop its background commands in the **Tasks** bar (<kbd>⌘B</kbd> moves a running command to the background), and run `!` shell commands with live output and a Stop button. **Built-in viewer:** click any file name in a reply to read it in Pitwall: Markdown rendered, code with line numbers, JSON pretty-printed, images, PDFs, and Office files, audio and video through Quick Look. <kbd>⇧⌘O</kbd> views any file.
 
 Plus: a 5-hour and 7-day **usage meter**, ⌘K **search across every session and prompt**, **Settings** (⌘,), a quit-confirmation if sessions are still working, folders opened from the Dock, VoiceOver labels and Reduce Motion support.
 

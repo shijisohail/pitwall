@@ -57,6 +57,7 @@ struct SessionList: View {
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("New session in \(p.name)")
                 Menu {
                     Button("New Session") { store.newConversation(cwd: p.path) }
+                    Button("New Session in Worktree…") { store.newWorktreeConversation(cwd: p.path) }
                     Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p.path)]) }
                     Divider()
                     Button("Close Project") { store.closeFolder(p.path) }

@@ -43,9 +43,20 @@ final class AppSettings {
     /// A short sound when a session finishes its turn, so you can look away while it works. On by default.
     var soundOnFinish: Bool { didSet { defaults.set(soundOnFinish, forKey: "soundOnFinish") } }
 
+    /// A macOS notification when a session needs you or finishes while you are in another app or another tab. On by default.
+    var notifyWhenAway: Bool { didSet { defaults.set(notifyWhenAway, forKey: "notifyWhenAway") } }
+
+    /// Offer every permission request and question to Coucou (the notch app) too, when it is running: answer in the notch
+    /// or here, whichever comes first. See CoucouLink.
+    var coucouLink: Bool { didSet { defaults.set(coucouLink, forKey: "coucouLink") } }
+
     /// Launch sessions with `--chrome` so the Claude in Chrome tools load (needs the Chrome extension). Opt-in: it adds
     /// browser tools to every session. Takes effect the next time a session's `claude` process starts.
     var claudeInChrome: Bool { didSet { defaults.set(claudeInChrome, forKey: "claudeInChrome") } }
+
+    /// Start every new session in its own git worktree (`claude --worktree`), so sessions in one project cannot overwrite
+    /// each other's files. Needs a git repository; other folders start normally. Off by default: it changes where edits land.
+    var worktreePerSession: Bool { didSet { defaults.set(worktreePerSession, forKey: "worktreePerSession") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -56,10 +67,13 @@ final class AppSettings {
         confirmQuitWhileRunning = defaults.object(forKey: "confirmQuit") as? Bool ?? true
         permissionsTipDismissed = defaults.object(forKey: "permissionsTipDismissed") as? Bool ?? false
         soundOnFinish = defaults.object(forKey: "soundOnFinish") as? Bool ?? true
+        notifyWhenAway = defaults.object(forKey: "notifyWhenAway") as? Bool ?? true
+        coucouLink = defaults.object(forKey: "coucouLink") as? Bool ?? true
         glassiness = min(1, max(0, defaults.object(forKey: "glassiness") as? Double ?? 0.25))
         notchFullScreen = defaults.object(forKey: "notchFullScreen") as? Bool ?? false
         showAgents = defaults.object(forKey: "showAgents") as? Bool ?? false
         claudeInChrome = defaults.object(forKey: "claudeInChrome") as? Bool ?? false
+        worktreePerSession = defaults.object(forKey: "worktreePerSession") as? Bool ?? false
         if !claudePath.isEmpty { ClaudeRunner.pathOverride = claudePath }
     }
 }

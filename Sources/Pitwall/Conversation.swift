@@ -26,7 +26,12 @@ final class Conversation: Identifiable {
     var contextWindow = 200_000
     var updatedAt: Date
     var isRunning = false
-    var approvals: [Approval] = []
+    var approvals: [Approval] = [] {
+        // Answered (or cancelled) here first: tell Coucou to drop its copy of the card.
+        didSet { if !coucouPending.isEmpty { pruneCoucou() } }
+    }
+    /// Requests currently relayed to Coucou, by approval id.
+    @ObservationIgnored private var coucouPending: [String: CoucouLink.Pending] = [:]
     var externallyActive = false
     var retryNote: String?
     var turnStart: Date?
@@ -46,6 +51,16 @@ final class Conversation: Identifiable {
     var agents: [AgentRun] = []
     @ObservationIgnored var agentSlots: [String: Int] = [:]
     @ObservationIgnored var agentFinishCount = 0
+    /// Tool-use ids of tasks that are not subagents (commands, workflows), so their events never become phantom agents.
+    @ObservationIgnored var nonAgentToolUses: Set<String> = []
+    /// The turn in which the subagent limit was last reported, so one turn reports it once.
+    @ObservationIgnored var limitNotedTurn = -1
+
+    /// Dynamic workflows Claude has run in this session (see Workflows.swift).
+    var workflows: [WorkflowRun] = []
+    /// The worktree this session is to start in (`claude --worktree <name>`); see Worktrees.swift. Only used before the
+    /// session exists. Once running, the folder the CLI reports (`cwd`) is the truth.
+    var worktreeName: String?
 
     /// Shell commands Claude Code is running for this session (see BackgroundTasks.swift).
     var tasks: [BackgroundTask] = []
@@ -272,26 +287,39 @@ final class Conversation: Identifiable {
             guard let self else { return }
             let was = self.isRunning
             self.runner = nil; self.isRunning = false; self.turnStart = nil; self.approvals.removeAll()
-            self.endAllTasks()
+            self.endAllTasks(); self.endAllWorkflows()
             self.resyncTail()
             if was { self.fail(code == 0 ? "Claude exited unexpectedly." : "Claude exited (\(code)). \(err)") }
         }
-        var o = ClaudeRunner.Options(cwd: cwd)
-        o.model = model == "default" ? nil : model
-        o.permission = permission; o.effort = effort
-        o.resume = forkFrom ?? sessionID; o.fork = forkFrom != nil; o.addDirs = additionalDirs
-        if permission == .bypassPermissions { o.extraArgs = ["--allow-dangerously-skip-permissions"] }
-        if AppSettings.shared.claudeInChrome { o.extraArgs.append("--chrome") }
+        let o = launchOptions()
+        guard FileManager.default.fileExists(atPath: o.cwd) else {
+            throw NSError(domain: "Pitwall", code: 2, userInfo: [NSLocalizedDescriptionKey: "The folder \(o.cwd) no longer exists."])
+        }
         try r.start(o)
         runner = r; forkFrom = nil
         stopTail()
         let dir = cwd
         r.request("initialize") { [weak self] body in
-            if let b = body { self?.store?.catalogs[dir] = Catalog(b) }
+            guard let b = body else { return }
+            let cat = Catalog(b)
+            self?.store?.catalogs[dir] = cat
+            if let now = self?.cwd, now != dir { self?.store?.catalogs[now] = cat }     // a worktree took over meanwhile
         }
     }
 
-    func teardown() { runner?.stop(); runner = nil; stopTail(); isRunning = false; endAllTasks(); stopAllShells() }
+    /// How `claude` is launched for this session right now.
+    func launchOptions() -> ClaudeRunner.Options {
+        var o = ClaudeRunner.Options(cwd: launchDirectory)
+        o.model = model == "default" ? nil : model
+        o.permission = permission; o.effort = effort
+        o.resume = forkFrom ?? sessionID; o.fork = forkFrom != nil; o.addDirs = additionalDirs
+        if permission == .bypassPermissions { o.extraArgs = ["--allow-dangerously-skip-permissions"] }
+        if AppSettings.shared.claudeInChrome { o.extraArgs.append("--chrome") }
+        o.extraArgs += worktreeArguments
+        return o
+    }
+
+    func teardown() { runner?.stop(); runner = nil; stopTail(); isRunning = false; endAllTasks(); endAllWorkflows(); stopAllShells() }
 
     func fail(_ msg: String) {
         messages.append(ChatMessage(role: .assistant, blocks: [Block(kind: .error, text: msg)]))
@@ -342,6 +370,31 @@ final class Conversation: Identifiable {
 
     // MARK: Approvals
 
+    private func pruneCoucou() {
+        let live = Set(approvals.map(\.id))
+        for id in coucouPending.keys where !live.contains(id) { coucouPending.removeValue(forKey: id)?.cancel() }
+    }
+
+    /// Also offers the request to Coucou (if it is running and the setting is on). Pitwall's own card stays: whichever is
+    /// answered first wins.
+    private func forwardToCoucou(_ a: Approval) {
+        guard AppSettings.shared.coucouLink else { return }
+        let data = CoucouLink.payload(requestID: a.id, tool: a.tool, input: a.input, suggestions: a.suggestions,
+                                      session: sessionID, cwd: cwd, bundleID: Bundle.main.bundleIdentifier ?? CoucouLink.pitwallBundleID)
+        let id = a.id
+        coucouPending[id] = CoucouLink.forward(data) { [weak self] reply in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.coucouReplied(id, reply) } }
+        }
+    }
+
+    private func coucouReplied(_ id: String, _ reply: CoucouLink.Reply) {
+        coucouPending[id] = nil
+        guard let a = approvals.first(where: { $0.id == id }),            // already answered here
+              let d = CoucouLink.decision(for: reply, input: a.input, suggestions: a.suggestions) else { return }
+        if d.allow { allow(a, input: d.input, remember: d.remember) } else { deny(a, message: d.message) }
+        note("Answered from Coucou")
+    }
+
     func allow(_ a: Approval, input: [String: Any]? = nil, remember: [String: Any]? = nil) {
         var resp: [String: Any] = ["behavior": "allow", "updatedInput": input ?? a.input]
         if let remember {
@@ -375,6 +428,7 @@ final class Conversation: Identifiable {
             tool: tool, input: r["input"] as? [String: Any] ?? [:],
             detail: r["description"] as? String, reason: r["decision_reason"] as? String,
             suggestions: r["permission_suggestions"] as? [[String: Any]] ?? []))
+        if let a = approvals.last { forwardToCoucou(a); Alerts.needsYou(self, a) }
     }
 
     // MARK: Event handling (stream-json)
@@ -382,6 +436,7 @@ final class Conversation: Identifiable {
     func handle(_ e: [String: Any]) {
         trackAgents(e)
         trackTasks(e)
+        trackWorkflows(e)
         let parent = e["parent_tool_use_id"]
         let isSub = parent != nil && !(parent is NSNull)
         switch e["type"] as? String {
@@ -409,6 +464,7 @@ final class Conversation: Identifiable {
                 if historyPath == nil { store?.markOwned(sid) }
             }
             if let m = e["model"] as? String { modelName = m }
+            if let c = e["cwd"] as? String { adoptWorkingDirectory(c) }
         case "session_title_changed":
             if let t = e["title"] as? String { title = t }
         case "compact_boundary":
@@ -443,7 +499,7 @@ final class Conversation: Identifiable {
         let wasStopped = stopRequested
         isRunning = false; turnStart = nil; approvals.removeAll(); retryNote = nil; stopRequested = false
         updatedAt = Date()
-        if !wasStopped { FinishSound.playIfEnabled() }
+        if !wasStopped { FinishSound.playIfEnabled(); Alerts.finished(self) }
         if autoNamePending {
             autoNamePending = false
             if !failed, !wasStopped, turnHadAssistant, runner?.isAlive == true {
@@ -514,6 +570,7 @@ final class Conversation: Identifiable {
             else if let arr = c["content"] as? [[String: Any]] { out = arr.compactMap { $0["text"] as? String }.joined(separator: "\n") }
             messages[mi].blocks[bi].result = Limits.clip(out)
             messages[mi].blocks[bi].isError = c["is_error"] as? Bool ?? false
+            if out.contains(ParallelLimits.subagentLimitMessage) { noteSubagentLimit() }
         }
     }
 
