@@ -16,7 +16,7 @@ enum Alerts {
     nonisolated(unsafe) static var deliver: (Message) -> Void = { UNAlerts.shared.post($0) }
     /// Whether the user is looking at this session right now. Swappable for tests.
     @MainActor static var isWatching: (Conversation) -> Bool = { c in
-        NSApp.isActive && Store.shared.selection == c.id && !Store.shared.showBoard
+        (NSApp?.isActive ?? false) && Store.shared.selection == c.id && !Store.shared.showBoard
     }
 
     @MainActor static func needsYou(_ c: Conversation, _ a: Approval) {
