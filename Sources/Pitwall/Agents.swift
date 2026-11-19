@@ -113,6 +113,9 @@ struct AgentRun: Identifiable, Equatable {
         if let e = endedAt { return e.timeIntervalSince(startedAt) }
         return Date().timeIntervalSince(startedAt)
     }
+
+    /// Can be stopped from here: it has a task id (from `task_started`) and is still going.
+    var canStop: Bool { !taskID.isEmpty && !state.isFinished }
 }
 
 // MARK: Tracking
@@ -128,10 +131,14 @@ extension Conversation {
         switch e["type"] as? String {
         case "system":
             switch e["subtype"] as? String {
-            case "task_started": agentStarted(e)
-            case "task_progress": agentProgress(e)
+            case "task_started":
+                // Commands and workflows are tasks too. Remember them, so their later events are not mistaken for agents.
+                if let kind = e["task_type"] as? String, kind != "local_agent" {
+                    if let id = e["tool_use_id"] as? String { nonAgentToolUses.insert(id) }
+                } else { agentStarted(e) }
+            case "task_progress": if !isNonAgent(e) { agentProgress(e) }
             case "task_updated": agentUpdated(e)
-            case "task_notification": agentNotified(e)
+            case "task_notification": if !isNonAgent(e) { agentNotified(e) }
             default: break
             }
         case "assistant":
@@ -142,6 +149,10 @@ extension Conversation {
             agentResults(content, parent: parent)
         default: break
         }
+    }
+
+    private func isNonAgent(_ e: [String: Any]) -> Bool {
+        (e["tool_use_id"] as? String).map { nonAgentToolUses.contains($0) } ?? false
     }
 
     private func agentIndex(_ id: String) -> Int? {
@@ -285,6 +296,27 @@ extension Conversation {
     private static func resultText(_ content: Any?) -> String {
         if let s = content as? String { return s }
         return (content as? [[String: Any]])?.compactMap { $0["text"] as? String }.joined(separator: "\n") ?? ""
+    }
+
+    // MARK: Controls
+
+    /// Stop one subagent. The CLI answers with `task_updated {status: killed}`, so the row updates from that, and the
+    /// session stays usable (verified live, Claude Code 2.1.319).
+    func stopAgent(_ id: String) {
+        guard let i = agentIndex(id), agents[i].canStop else { return }
+        runner?.request("stop_task", ["task_id": agents[i].taskID])
+    }
+
+    /// Stop every subagent that is still going.
+    func stopAllAgents() {
+        for a in agents where a.canStop { runner?.request("stop_task", ["task_id": a.taskID]) }
+    }
+
+    /// Claude called `Agent` at the concurrent-subagent limit. The CLI tells it not to retry, so say why nothing started.
+    func noteSubagentLimit() {
+        guard limitNotedTurn != turnID else { return }
+        limitNotedTurn = turnID
+        note("Claude Code allows \(ParallelLimits.subagents) subagents at once and Claude asked for more, so it won't retry. Stop some, or raise \(ParallelLimits.subagentsKey) in your Claude settings.")
     }
 
     /// Start over for the current setting: cleared when the Agent view is off, rebuilt from the transcript when it is on.

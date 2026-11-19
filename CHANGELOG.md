@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Notifications.** When a session needs an answer (a permission request, a question, a plan) or finishes, and you are in another app or another tab, macOS shows a notification; clicking it opens that session. It stays quiet for the session you are already looking at. On by default: **Settings ▸ New sessions ▸ Notify me when a session needs me or finishes while I'm elsewhere**.
+- **Today strip on Pit Wall.** Sessions touched today, money spent, files changed (with +/− lines) and agents working, in one line under the header.
+- **Worktree sessions.** A session can work in its own git worktree (`claude --worktree`), so two sessions in one project can't overwrite each other's files. Start one from a project's **… ▸ New Session in Worktree…** (sidebar), **New session ▸ in a worktree…** (Pit Wall), or switch **Run in Own Worktree** on in a new session's **…** menu before the first message. **Settings ▸ Parallel work** can do it for every new session. A branch-icon badge in the header shows the worktree, and the session's diff, files, shell and Terminal hand-off all follow it. **… ▸ Remove Worktree…** deletes it after checking for uncommitted work, and keeps its branch if it holds unmerged commits. A session whose worktree was deleted reopens in the project folder.
+- **Workflows panel.** When Claude runs a dynamic workflow (a script that fans work out to many agents, started with `ultracode` or by asking for a workflow), a card above the Tasks bar shows its phases, each agent's state, last tool, tokens and time, with Stop, a log link, and the script (copyable). It works whether or not the Agent view is on.
+- **Stop an agent.** Each agent in the Agent view has a Stop button, and **Stop all** appears when several are working.
+- **Subagent limit warning.** Claude Code runs at most 20 subagents at once and tells Claude not to retry past that. The Agents tab now warns from 16 of 20 (the limit is read from `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` in your Claude settings if you changed it), and a session says why nothing started when the limit is hit.
+
+### Changed
+- Pit Wall cards: a session that is working now has a slowly breathing green ring, a card waiting on you has a soft amber glow, and cards lift slightly under the pointer. Reduce Motion keeps the ring still.
+
+### Fixed
+- With the Agent view on, a finished background command could appear as a bot named "agent". Only real subagents are tracked now.
+
 ## [1.5.0] - 2026-11-12
 
 ### Added

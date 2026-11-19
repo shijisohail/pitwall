@@ -7,11 +7,26 @@ struct ChatView: View {
     @Environment(Store.self) private var store
     @Bindable private var settings = AppSettings.shared
     @State private var chatHeight: CGFloat = 800
+    /// True while the transcript end is in view. Streaming output only follows the end while pinned, so scrolling up to read is never fought.
+    @State private var pinned = true
+    @State private var lastContentHeight: CGFloat = 0
 
     private var scrollToken: Int {
         let last = conversation.messages.last?.blocks.last
         return conversation.messages.count &* 1_000_003 &+ (last?.text.count ?? 0) &+ (last?.inputJSON.count ?? 0)
             &+ (last?.result?.count ?? 0) &+ (conversation.isRunning ? 1 : 0) &+ conversation.approvals.count &* 7
+    }
+
+    private struct ScrollEnd: Equatable { var distance: CGFloat; var height: CGFloat }
+
+    private func follow(_ proxy: ScrollViewProxy) {
+        if pinned { proxy.scrollTo("bottom", anchor: .bottom) }
+    }
+
+    private func jump(_ proxy: ScrollViewProxy, animated: Bool = false) {
+        pinned = true
+        if animated { withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) } }
+        else { proxy.scrollTo("bottom", anchor: .bottom) }
     }
 
     private var meta: String {
@@ -42,18 +57,46 @@ struct ChatView: View {
                     .padding(.horizontal, 26).padding(.top, 8).padding(.bottom, 24)
                 }
                 .defaultScrollAnchor(.bottom)
-                .onChange(of: scrollToken) { proxy.scrollTo("bottom", anchor: .bottom) }
-                .onChange(of: conversation.loadState) { proxy.scrollTo("bottom", anchor: .bottom) }
+                // Content growing under a pinned view is not the user leaving the end; only an offset change at a steady height is.
+                .onScrollGeometryChange(for: ScrollEnd.self) {
+                    // containerSize already excludes the bottom inset (the composer), so none is added here.
+                    ScrollEnd(distance: $0.contentSize.height - ($0.contentOffset.y + $0.containerSize.height),
+                              height: $0.contentSize.height)
+                } action: { _, e in
+                    defer { lastContentHeight = e.height }
+                    guard e.height == lastContentHeight else { return }
+                    if e.distance > 60 { pinned = false } else if e.distance < 24 { pinned = true }
+                }
+                .onChange(of: scrollToken) { follow(proxy) }
+                .onChange(of: conversation.loadState) { jump(proxy) }
+                // Sending a message always returns to the end.
+                .onChange(of: conversation.messages.count) { if conversation.messages.last?.role == .user { jump(proxy) } }
                 // The area under the chat grows when a task or a side answer appears or the Tasks bar opens: keep the end in view.
-                .onChange(of: conversation.tasks.count) { proxy.scrollTo("bottom", anchor: .bottom) }
-                .onChange(of: conversation.tasksExpanded) { proxy.scrollTo("bottom", anchor: .bottom) }
-                .onChange(of: conversation.sideQA.count) { proxy.scrollTo("bottom", anchor: .bottom) }
+                .onChange(of: conversation.tasks.count) { follow(proxy) }
+                .onChange(of: conversation.tasksExpanded) { follow(proxy) }
+                .onChange(of: conversation.workflows.count) { follow(proxy) }
+                .onChange(of: conversation.sideQA.count) { follow(proxy) }
+                .overlay(alignment: .bottom) {
+                    if !pinned {
+                        Button { jump(proxy, animated: true) } label: {
+                            Label(conversation.isRunning ? "Latest" : "Jump to latest", systemImage: "arrow.down")
+                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        }
+                        .buttonStyle(HTBSecondary())
+                        .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+                        .padding(.bottom, 10)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .accessibilityLabel("Scroll to latest message")
+                    }
+                }
+                .animation(.snappy(duration: 0.2), value: pinned)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(spacing: 10) {
                     if conversation.externallyActive { LiveBanner(conversation: conversation) }
                     if let r = conversation.retryNote { Text(r).font(.caption).foregroundStyle(.orange) }
                     SideAnswers(conversation: conversation)
+                    WorkflowsBar(conversation: conversation)
                     TasksBar(conversation: conversation)
                     RunningBar(conversation: conversation)
                     ApprovalStack(conversation: conversation)
@@ -84,6 +127,7 @@ struct ChatView: View {
                 Text(meta).font(.system(size: 11.5, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 8)
+            if let w = conversation.worktreeLabel { worktreePill(w) }
             if conversation.contextTokens > 0 || conversation.cost > 0 { statusPill }
             Button { conversation.openInTerminal() } label: { Image(systemName: "terminal") }
                 .buttonStyle(HTBSecondary(circle: true)).help("Continue this session in Terminal (⇧⌘T)").accessibilityLabel("Open in Terminal")
@@ -93,6 +137,17 @@ struct ChatView: View {
             actions
         }
         .padding(.horizontal, 26).padding(.top, 14).padding(.bottom, 10)
+    }
+
+    /// Edits from this session land in a separate checkout, not in the project folder: always say so.
+    private func worktreePill(_ name: String) -> some View {
+        Label(name, systemImage: "arrow.triangle.branch")
+            .font(.system(size: 12, design: .monospaced)).foregroundStyle(HTB.cyan).lineLimit(1)
+            .padding(.horizontal, 10).padding(.vertical, 7).panel(RoundedRectangle(cornerRadius: 8))
+            .help(conversation.inWorktree
+                  ? "This session works in its own git worktree, so its edits don't touch the main checkout. Branch worktree-\(name)."
+                  : "This session will start in its own git worktree (worktree-\(name)) when you send the first message.")
+            .accessibilityLabel("Worktree \(name)")
     }
 
     private var statusPill: some View {
@@ -121,6 +176,17 @@ struct ChatView: View {
                 Button("Hooks…") { store.sheet = .config("hooks") }
                 Button("Status…") { store.sheet = .status }
                 Button("All Commands & Skills…") { store.sheet = .commands }
+            }
+            if conversation.canChooseWorktree || conversation.inWorktree {
+                Section("Worktree") {
+                    if conversation.canChooseWorktree {
+                        Toggle("Run in Own Worktree", isOn: Binding(get: { conversation.worktreeName != nil }, set: { _ in conversation.toggleWorktree() }))
+                    }
+                    if conversation.inWorktree {
+                        Button("Reveal Worktree in Finder") { conversation.revealWorktree() }
+                        Button("Remove Worktree…", role: .destructive) { conversation.removeWorktree() }.disabled(conversation.isRunning)
+                    }
+                }
             }
             Section("View") {
                 Toggle("Agent View", isOn: $settings.showAgents)

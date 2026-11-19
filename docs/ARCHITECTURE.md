@@ -22,6 +22,10 @@ All UI state types are `@MainActor` and `@Observable`. Child-process output is p
 | `Store.swift` | The workspace (opened folders), tabs, search scope, project list, usage windows, sheet routing. Persists to `UserDefaults`. |
 | `History.swift` | Indexes sessions cheaply (head and tail of each transcript) and parses full transcripts incrementally (`TranscriptParser`). |
 | `Derived.swift` | Per-session derived data from the transcript: changed files, live feed, to-do progress, plan. |
+| `Agents.swift` | Tracks subagents from the `task_*` events (Agent view), stops one or all (`stop_task`), explains the concurrent-subagent limit error. |
+| `Workflows.swift` | Tracks dynamic workflows (`task_type: "local_workflow"`): phases, agents, progress snapshots, stop. |
+| `Worktrees.swift` | Git worktree sessions: `--worktree` launch flag, adopting the worktree folder the CLI reports, safe removal (`git worktree remove`), name rules. |
+| `ParallelLimits.swift` | The documented limits on parallel work (20 subagents, depth 3, 16 workflow agents), read from Claude settings, and the warning thresholds. |
 | `Models.swift` | Value types: blocks, messages, permission modes, catalog, approvals, memory limits. |
 | `AppSettings.swift` | User preferences (Settings window): `claude` path, default mode, animation, quit confirmation. |
 | `AppDelegate.swift` | Quit confirmation, stopping child processes on quit, opening folders from the Dock / Finder. |
@@ -35,6 +39,7 @@ All UI state types are `@MainActor` and `@Observable`. Child-process output is p
 - **Workspace scoping.** `Store.owner(ofPath:)` maps every session to the deepest opened folder; nothing outside the workspace is listed, loaded or tailed. Transcripts load lazily on selection.
 - **Not sandboxed.** The sandbox forbids launching the user's CLI and reading `~/.claude`. Hardened Runtime and notarization are used instead.
 - **Pay only for what is on screen.** While Mission Control is showing, no transcript is loaded, no file is tailed and no command catalog is fetched; the periodic history rescan re-reads only files whose modification time changed. Idle CPU is 0%; the optional background animation costs a few percent, so it is off by default.
+- **Parallel sessions are isolated with git worktrees, not by Pitwall.** A session started with `claude --worktree <name>` works in `<repo>/.claude/worktrees/<name>`; Pitwall switches the session's `cwd` to what the CLI reports, so diff, files, shell and terminal hand-off all follow the worktree. Nothing about worktrees is stored by Pitwall: the path itself says it is one (`Worktrees.name(inPath:)`). `-p` runs leave the worktree and its lock behind, so removal is an explicit action.
 - **One process per session, kept alive between turns**; model and permission mode change live over control requests; effort, extra folders and Full access restart the process on the next send (resuming the same session).
 
 ## Concurrency

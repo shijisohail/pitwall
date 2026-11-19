@@ -47,11 +47,35 @@ struct AgentsTab: View {
         return parts.joined(separator: "  ·  ")
     }
 
+    private var limit: Int { ParallelLimits.subagents }
+    private var pressure: ParallelLimits.Pressure { ParallelLimits.pressure(running: conversation.agentsWorking, limit: limit) }
+
+    /// Claude Code stops starting subagents at the limit (and tells Claude not to retry), so warn before that happens.
+    @ViewBuilder private var limitBanner: some View {
+        if pressure != .ok {
+            let n = conversation.agentsWorking
+            Label(pressure == .full ? "\(n) of \(limit) subagents running. Claude can't start more until some finish."
+                                    : "\(n) of \(limit) subagents running. At \(limit) Claude can't start more.",
+                  systemImage: "exclamationmark.triangle.fill")
+                .font(.system(size: 11.5)).foregroundStyle(pressure == .full ? HTB.red : HTB.amber)
+                .padding(9).frame(maxWidth: .infinity, alignment: .leading)
+                .background((pressure == .full ? HTB.red : HTB.amber).opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(agents.isEmpty ? "No agents yet" : summary)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(.secondary)
-                .accessibilityLabel(agents.isEmpty ? "No agents yet" : summary)
+            HStack {
+                Text(agents.isEmpty ? "No agents yet" : summary)
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(.secondary)
+                    .accessibilityLabel(agents.isEmpty ? "No agents yet" : summary)
+                Spacer(minLength: 8)
+                if conversation.agentsWorking > 1 {
+                    Button("Stop all") { conversation.stopAllAgents() }.buttonStyle(.plain)
+                        .font(.system(size: 11.5)).foregroundStyle(HTB.red).help("Stop every agent that is still working")
+                }
+            }
+            limitBanner
             AgentCanvas(conversation: conversation, selected: $selected)
             if agents.isEmpty {
                 Text("When Claude spawns subagents they appear here as little bots, moving to Read, Search, Edit or Run as they work.")
@@ -69,7 +93,11 @@ struct AgentsTab: View {
 
     private var roster: some View {
         VStack(spacing: 8) {
-            ForEach(ordered) { run in AgentRow(run: run, selected: selected == run.id) { selected = selected == run.id ? nil : run.id } }
+            ForEach(ordered) { run in
+                AgentRow(run: run, selected: selected == run.id,
+                         tap: { selected = selected == run.id ? nil : run.id },
+                         stop: run.canStop ? { conversation.stopAgent(run.id) } : nil)
+            }
         }
     }
 }
@@ -227,6 +255,7 @@ private struct AgentRow: View {
     let run: AgentRun
     let selected: Bool
     let tap: () -> Void
+    var stop: (() -> Void)? = nil
 
     private var stats: String {
         var p: [String] = []
@@ -237,6 +266,7 @@ private struct AgentRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 6) {
             Button(action: tap) {
                 HStack(alignment: .top, spacing: 10) {
                     PulseDot(color: agentTint(run), pulsing: !run.state.isFinished).padding(.top, 5)
@@ -256,6 +286,11 @@ private struct AgentRow: View {
                 }
                 .contentShape(Rectangle())
             }.buttonStyle(.plain)
+            if let stop {
+                Button(action: stop) { Image(systemName: "stop.circle").font(.system(size: 15)).frame(width: 26, height: 26).contentShape(Rectangle()) }
+                    .buttonStyle(.plain).foregroundStyle(HTB.red).help("Stop this agent").accessibilityLabel("Stop \(run.name)")
+            }
+            }
 
             if selected { detail }
         }

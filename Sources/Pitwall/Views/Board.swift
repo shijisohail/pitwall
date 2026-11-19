@@ -33,6 +33,7 @@ struct BoardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
+            TodayStrip(sessions: store.conversations.filter { inScope($0) })
             projectChips
             if needs.isEmpty && working.isEmpty {
                 HomeView(recent: recent)
@@ -68,6 +69,7 @@ struct BoardView: View {
             if let u = store.usage { UsageMini(usage: u) }
             Menu {
                 Button("New session in current project") { store.newConversation() }
+                Button("New session in a worktree…") { store.newWorktreeConversation() }
                 Divider()
                 ForEach(store.projects.prefix(8)) { p in Button(p.name) { store.newConversation(cwd: p.path) } }
                 Divider()
@@ -156,6 +158,8 @@ struct UsageMini: View {
 struct SessionCard: View {
     let c: Conversation
     @Environment(Store.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hover = false
 
     private var live: Bool { c.isRunning || c.externallyActive }
 
@@ -174,6 +178,12 @@ struct SessionCard: View {
         }
         .padding(14).frame(maxWidth: .infinity, alignment: .leading)
         .glassCard(18, tint: c.approvals.isEmpty ? nil : .orange.opacity(0.16))
+        .overlay { LiveGlow(active: live && c.approvals.isEmpty) }
+        .overlay { if !c.approvals.isEmpty { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(HTB.amber.opacity(0.35), lineWidth: 1.5).blur(radius: 3).allowsHitTesting(false) } }
+        .scaleEffect(hover && !reduceMotion ? 1.012 : 1)
+        .shadow(color: .black.opacity(hover ? 0.35 : 0.15), radius: hover ? 16 : 6, y: hover ? 8 : 3)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hover)
+        .onHover { hover = $0 }
         .contentShape(RoundedRectangle(cornerRadius: 18))
         .onTapGesture { store.open(c) }
         .accessibilityElement(children: .contain)
@@ -273,5 +283,23 @@ struct SessionCard: View {
                 Text(b).foregroundStyle(.secondary)
             }
         }.font(.system(size: 12.5, design: .monospaced))
+    }
+}
+
+/// A slow green breathing ring around a card whose session is working, so live work reads at a glance.
+struct LiveGlow: View {
+    let active: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var on = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .strokeBorder(LinearGradient(colors: [HTB.green.opacity(0.9), HTB.cyan.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2)
+            .shadow(color: HTB.green.opacity(0.45), radius: 8)
+            .opacity(!active ? 0 : (reduceMotion ? 0.6 : (on ? 0.85 : 0.3)))
+            .animation(active && !reduceMotion ? .easeInOut(duration: 1.6).repeatForever(autoreverses: true) : .default, value: on)
+            .onAppear { on = true }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }

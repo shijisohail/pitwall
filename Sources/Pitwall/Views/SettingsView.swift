@@ -40,10 +40,17 @@ struct SettingsView: View {
                 Text(settings.defaultPermission.blurb).font(.caption).foregroundStyle(.secondary)
                 Toggle("Confirm before quitting while sessions are working", isOn: $settings.confirmQuitWhileRunning)
                 Toggle("Play a sound when a session finishes", isOn: $settings.soundOnFinish)
+                Toggle("Notify me when a session needs me or finishes while I'm elsewhere", isOn: $settings.notifyWhenAway)
+                Toggle("Let Coucou answer permission requests too (when it is running)", isOn: $settings.coucouLink)
             }
             Section("Agents") {
                 Toggle("Agent view", isOn: $settings.showAgents)
                 Text("Off by default. When on, the inspector gets an Agents tab showing every subagent Claude spawns as a little bot, what each one is doing, and how many there are. Turning it off hides the tab and stops tracking. You can also switch it from a session's … menu.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Parallel work") {
+                Toggle("Give each new session its own worktree", isOn: $settings.worktreePerSession)
+                Text("Off by default. Each new session in a git project works in a separate checkout under .claude/worktrees on its own branch (worktree-…), so two sessions in the same project can't overwrite each other's files. Your project folder stays untouched until you merge. Folders that aren't git repositories start normally. You can also choose this per session: a project's … menu in the sidebar, or a new session's … menu.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Browser") {
