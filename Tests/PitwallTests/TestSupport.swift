@@ -125,3 +125,8 @@ done
         return try await body()
     }
 }
+
+/// Parent of every suite that flips the global `AppSettings.shared.showAgents`. Turning it on or off posts a notification
+/// that makes *every* store reset its agents, so two such suites running at once wipe each other's agents mid-test
+/// (`.serialized` alone only orders tests within one suite). Nested suites run one after another.
+@Suite(.serialized) enum AgentSettingGate {}
