@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-19
+
 ### Added
 - **Notifications.** When a session needs an answer (a permission request, a question, a plan) or finishes, and you are in another app or another tab, macOS shows a notification; clicking it opens that session. It stays quiet for the session you are already looking at. On by default: **Settings ▸ New sessions ▸ Notify me when a session needs me or finishes while I'm elsewhere**.
 - **Today strip on Pit Wall.** Sessions touched today, money spent, files changed (with +/− lines) and agents working, in one line under the header.
