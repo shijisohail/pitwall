@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import Pitwall
 
+extension AgentSettingGate {
 /// Serialized: flips the shared `AppSettings.shared.showAgents`.
 @MainActor @Suite(.serialized) struct AgentControlTests {
     private func make() -> Conversation {
@@ -71,4 +72,5 @@ import Foundation
         #expect(notes.count == 1)
         #expect(notes[0].text.contains(ParallelLimits.subagentsKey))
     }
+}
 }

@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import Pitwall
 
+extension AgentSettingGate {
 @MainActor @Suite(.serialized) struct WorkflowTests {
     private func make() -> Conversation {
         let c = Conversation(cwd: "/tmp"); c.store = makeStore(); return c
@@ -109,4 +110,5 @@ import Foundation
         c.dismissWorkflow("we5obch08")
         #expect(c.workflows.count == 1)
     }
+}
 }
