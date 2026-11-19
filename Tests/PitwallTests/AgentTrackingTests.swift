@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import Pitwall
 
+extension AgentSettingGate {
 /// Agent tracking, driven by a real captured stream (see AgentsFixture.swift) and by hand-built events.
 /// Serialized: the tests flip the shared `AppSettings.shared.showAgents`, and a test that awaits would otherwise
 /// see another test's value mid-run.
@@ -128,4 +129,5 @@ import Foundation
         for i in 0..<(AgentRun.maxSteps + 25) { r.addStep(AgentStep(id: "\(i)", kind: .read, title: "Read", detail: "")) }
         #expect(r.steps.count == AgentRun.maxSteps && r.steps.last?.id == "\(AgentRun.maxSteps + 24)")
     }
+}
 }
